@@ -8,26 +8,13 @@ using namespace std;
 using namespace cv;
 
 /* fit for img_03 */
-int thresh = 17; // [0, 255] -> 8bit
-int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 17 -> 3bit
-int offset = 9; // [0, 7] -> 3bit
-int gradMode = 0; // 1bit
-int highThresh = 127; // [0, 255] -> 8bit (low impact -> ?)
-int morphMode = 0; // [0, 1] -> 1bit
-int morphTimes = 1; // [0, 3] -> 2bit
-int aspectRatio = 1; // [0, 10] -> 4bit
-int contPixNums = 7; // [0, 7] -> 3bit
-
-/* fit for img_04 */
-//int thresh = 17; // [0, 255] -> 8bit
-//int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 17 -> 3bit
-//int offset = 7; // [0, 7] -> 3bit
-//int gradMode = 1; // 1bit
-//int highThresh = 127; // [0, 255] -> 8bit (low impact -> ?)
-//int morphMode = 0; // [0, 1] -> 1bit
-//int morphTimes = 1; // [0, 3] -> 2bit
-//int aspectRatio = 1; // [0, 10] -> 4bit
-//int contPixNums = 7; // [0, 7] -> 3bit
+int thresh = 17; // [0, 255] -> dv01 - 8bit
+int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int offset = 9; // [0, 15] -> dv03 - 4bit
+int erodeFlag = 1; // -> dv04 - 1bit
+int erodeTimes = 2; // -> dv05 - 2bit 
+int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
+int contPixNums = 7; // [0, 7] -> dv07 - 3bit
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -35,19 +22,13 @@ void imgShow(const string& name, const Mat& img) {
 	destroyAllWindows();
 }
 
-void gradCal(Mat& srcImg, Mat& dstImg, int mode) {
-	if (mode == 0) {
-		// Sobel Detecting
-		Mat sobelX, sobelY, gradientMagnitude;
-		Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
-		Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
-		magnitude(sobelX, sobelY, gradientMagnitude);
-		normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
-	}
-	else if (mode == 1) {
-		// Canny Detecting
-		Canny(srcImg, dstImg, highThresh / 3, highThresh);
-	}
+void gradCal(Mat& srcImg, Mat& dstImg) {
+	// Sobel Detecting
+	Mat sobelX, sobelY, gradientMagnitude;
+	Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
+	Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
+	magnitude(sobelX, sobelY, gradientMagnitude);
+	normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
 }
 
 vector<Vec3f> circleDetect(Mat img) {
@@ -79,14 +60,14 @@ int comDistance(int y, int x, Vec3f circle) {
 
 int main(void) {
 	Mat oriImg = imread("./imgs_1220_v2/input/oriImg_04.png", IMREAD_GRAYSCALE);
-	// imgShow("res", oriImg);
+	//imgShow("res", oriImg);
 
 	Mat edges_s1;
-	gradCal(oriImg, edges_s1, 0); // stat-01
-	// imgShow("res", edges_s1);
+	gradCal(oriImg, edges_s1); // stat-01 -> Sobel
+	//imgShow("res", edges_s1);
 
 	Mat biImg;
-	threshold(edges_s1, biImg, thresh, 255, THRESH_BINARY); // stat-02
+	threshold(edges_s1, biImg, thresh, 255, THRESH_BINARY); // stat-02 -> threshold
 	// imgShow("res", biImg);
 
 	vector<Vec3f> circles = circleDetect(biImg); // GaussianSize
@@ -106,14 +87,18 @@ int main(void) {
 			}
 		}
 	}
-	// imgShow("test", biImg);
+	//imgShow("test", biImg);
 
 	Mat blurImg_mask;
 	medianBlur(biImg, blurImg_mask, 3);
-	// For img-04
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-	erode(blurImg_mask, blurImg_mask, kernel);
-	erode(blurImg_mask, blurImg_mask, kernel);
+	if (erodeFlag) {
+		// For img-04
+		Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+		for (int i = 0; i < erodeTimes; i++) {
+			erode(blurImg_mask, blurImg_mask, kernel);
+		}
+	}
+	// imgShow("test", blurImg_mask);
 
 	vector<vector<Point>> contours;
 	findContours(blurImg_mask, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
@@ -125,6 +110,7 @@ int main(void) {
 			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
 		}
 	}
+	// imgShow("test", mask);
 
 	if (circles.size() != 0) {
 		for (int y = 0; y < biImg.rows; y++) {
@@ -138,6 +124,5 @@ int main(void) {
 		}
 	}
 	imgShow("res", biImg);
-
 	return 0;
 }
