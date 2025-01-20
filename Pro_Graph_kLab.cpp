@@ -108,14 +108,12 @@ int main(void) {
 	}
 	// imgShow("test", biImg);
 
-	/* 伀: Testing Part */
 	Mat blurImg_mask;
 	medianBlur(biImg, blurImg_mask, 3);
-	// 伀: For img-04
+	// For img-04
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	erode(blurImg_mask, blurImg_mask, kernel);
 	erode(blurImg_mask, blurImg_mask, kernel);
-	imgShow("test", blurImg_mask);
 
 	vector<vector<Point>> contours;
 	findContours(blurImg_mask, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
@@ -127,7 +125,7 @@ int main(void) {
 			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
 		}
 	}
-	imgShow("test", mask);
+
 	if (circles.size() != 0) {
 		for (int y = 0; y < biImg.rows; y++) {
 			for (int x = 0; x < biImg.cols; x++) {
