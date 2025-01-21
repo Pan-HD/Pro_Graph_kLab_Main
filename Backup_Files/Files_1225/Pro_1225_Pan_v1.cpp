@@ -8,23 +8,28 @@ using namespace std;
 using namespace cv;
 
 // #define RAND_MAX 32767 // the max value of random number
-#define chLen 24 // the length of chromosome
-#define num_ind 100 // the nums of individuals in the group
-#define num_gen 100 // the nums of generation of the GA algorithm
-#define cross 0.8 // the rate of cross
-#define mut 0.05 // the rate of mutation
 #define numSets 2 // the num of sets(pairs)
+#define numDV 7 // the nums of decision-variables
+#define chLen 22 // the length of chromosome
+#define num_ind 100 // the nums of individuals in the group
+#define num_gen 150 // the nums of generation of the GA algorithm
+#define cross 0.9 // the rate of cross
+#define mut 0.2 // the rate of mutation
+
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-// the declaration of 6 decision variables
-int offsetOuter = 0; // [0, 5] -> 3 bits
-int offsetInner = 0; // [0, 5] -> 3 bits
-int thresh = 0; // [0, 255] -> 8 bits
-int sigmaVal = 0; // [0, 10] -> 4 bits
-int sizeSobel = 1; // 1, 3, 5, 7 -> 2 bits
-int sizeGaussian = 3; // 3, 5, 7, 9, 31 -> 4 bits
+int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3 };
+
+// the declaration of 7 decision variables
+int thresh = 17; // [0, 255] -> dv01 - 8bit
+int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int offset = 9; // [0, 15] -> dv03 - 4bit
+int erodeFlag = 1; // -> dv04 - 1bit
+int erodeTimes = 2; // -> dv05 - 2bit 
+int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
+int contPixNums = 7; // [0, 7] -> dv07 - 3bit
 
 typedef struct {
     int ch[chLen]; // defining chromosomes by ch-array
@@ -40,8 +45,8 @@ typedef struct {
     double genDevFValue;
 }genInfoType;
 
-// for storing the fitness value of 6 decision variables
-gene h[num_ind][6];
+// for storing the fitness value of 7 decision variables
+gene h[num_ind][numDV];
 
 // for storing the info of each generation
 genInfoType genInfo[num_gen];
@@ -55,35 +60,6 @@ void imgShow(const string& name, const Mat& img) {
     destroyAllWindows();
 }
 
-Vec3f circleDetect(Mat img) {
-    Mat blurred;
-    GaussianBlur(img, blurred, Size(sizeGaussian, sizeGaussian), sigmaVal, sigmaVal);
-    vector<Vec3f> circles;
-    HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
-    return circles[0];
-}
-
-/*
-    Ret: 0 -> padding of the box -> set to black
-         1 -> outer of the circle -> set to white
-         2 -> inner of the circle -> color swapping
-*/
-int comDistance(int y, int x, Vec3f circle) {
-    int centerX = (int)circle[0];
-    int centerY = (int)circle[1];
-    int radius = (int)circle[2];
-    int distance = (int)sqrt(pow((double)(x - centerX), 2) + pow((double)(y - centerY), 2));
-    if (distance > radius + offsetOuter) {
-        return 0;
-    }
-    else if (distance > radius - offsetInner && distance <= radius + offsetOuter) {
-        return 1;
-    }
-    else {
-        return 2;
-    }
-}
-
 void make(gene* g)
 {
     for (int j = 0; j < num_ind; j++) {
@@ -94,78 +70,42 @@ void make(gene* g)
     }
 }
 
+/*
+  function: Convert the decision variable information in the chromosome corresponding to each individual
+            from binary to decimal and store it in the h array
+*/
 void phenotype(gene* g)
 {
     int i = 0, j = 0, k = 0;
     // initializing the fitness in h-array by assigning 0
     for (j = 0; j < num_ind; j++) {
-        for (i = 0; i < 6; i++) {
+        for (i = 0; i < numDV; i++) {
             h[j][i].fitness = 0;
         }
     }
 
-    for (j = 0; j < num_ind; j++) {
-        // offsetOuter - 3 bits
-        i = 3;
-        for (k = 0; k < 3; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][0].fitness += (int)pow(2.0, (double)i);
+    for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
+        int curIdx_chrom = 0;
+        for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
+            int len_curDv = info_dv_arr[idx_dv];
+            int sum_val = 0;
+            for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
+                sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - idx - 1));
             }
-        }
-        // offsetInner - 3 bits
-        i = 3;
-        for (k = 3; k < 6; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][1].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-
-        // thresh - 8 bit
-        i = 8;
-        for (k = 6; k < 14; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][2].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-
-        // sigmaVal - 4 bit
-        i = 4;
-        for (k = 14; k < 18; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][3].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-        // sizeSobel - 2 bits
-        i = 2;
-        for (k = 18; k < 20; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][4].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-        // sizeGaussian - 4 bit
-        i = 4;
-        for (k = 20; k < 24; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][5].fitness += (int)pow(2.0, (double)i);
-            }
+            h[idxInd][idx_dv].fitness = sum_val;
+            curIdx_chrom += len_curDv;
         }
     }
-
 }
 
 void import_para(int ko) {
-    offsetOuter = h[ko][0].fitness;
-    offsetInner = h[ko][1].fitness;
-    thresh = h[ko][2].fitness;
-    sigmaVal = h[ko][3].fitness;
-    sizeSobel = 1 + 2 * h[ko][4].fitness;
-    sizeGaussian = 1 + 2 * h[ko][5].fitness;
+    thresh = h[ko][0].fitness;
+    sizeGaussian = h[ko][1].fitness * 2 + 1;
+    offset = h[ko][2].fitness;
+    erodeFlag = h[ko][3].fitness;
+    erodeTimes = h[ko][4].fitness;
+    aspectRatio = h[ko][5].fitness;
+    contPixNums = h[ko][6].fitness;
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -173,16 +113,7 @@ double calculateF1Score(double precision, double recall) {
     return 2.0 * (precision * recall) / (precision + recall);
 }
 
-void calculateMetrics(Mat metaImg[], Mat tarImg[], Mat maskImg[], int numInd, int numGen) {
-    Mat metaImg_g[numSets];
-    Mat tarImg_g[numSets];
-    Mat maskImg_g[numSets];
-    for (int i = 0; i < numSets; i++) {
-        cvtColor(metaImg[i], metaImg_g[i], cv::COLOR_BGR2GRAY);
-        cvtColor(tarImg[i], tarImg_g[i], cv::COLOR_BGR2GRAY);
-        cvtColor(maskImg[i], maskImg_g[i], cv::COLOR_BGR2GRAY);
-    }
-
+void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numInd, int numGen) {
     double f1_score[numSets];
 
     for (int k = 0; k < numSets; k++) { // k: the index of the set being processed
@@ -368,13 +299,45 @@ void elite_back(gene* g, gene* elite) {
     h[tmp][0].f_value = elite[1].f_value;
 }
 
+/*
+  function: Sobel processing
+*/
+void gradCal(Mat& srcImg, Mat& dstImg) {
+    Mat sobelX, sobelY, gradientMagnitude;
+    Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
+    Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
+    magnitude(sobelX, sobelY, gradientMagnitude);
+    normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
+}
+
+vector<Vec3f> circleDetect(Mat img) {
+    Mat blurred;
+    GaussianBlur(img, blurred, Size(sizeGaussian, sizeGaussian), 0, 0);
+    vector<Vec3f> circles;
+    HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
+    return circles;
+}
+
+int comDistance(int y, int x, Vec3f circle) {
+    int centerX = (int)circle[0];
+    int centerY = (int)circle[1];
+    int radius = (int)circle[2];
+    int distance = (int)sqrt(pow((double)(x - centerX), 2) + pow((double)(y - centerY), 2));
+    if (distance > radius) {
+        return 0;
+    }
+    else if (distance > radius - offset && distance <= radius) {
+        return 1;
+    }
+    else {
+        return 2;
+    }
+}
+
 void multiProcess(Mat imgArr[][3]) {
-    Mat sobelX[numSets];
-    Mat sobelY[numSets];
-    Mat gradientMagnitude[numSets];
-    Mat normalizedGradient[numSets];
-    Vec3f circleInfo[numSets];
+    Mat edges_s1[numSets];
     Mat biImg[numSets];
+    Mat blurImg_mask[numSets];
 
     char imgName_pro[numSets][256];
     char imgName_final[numSets][256];
@@ -415,39 +378,59 @@ void multiProcess(Mat imgArr[][3]) {
         for (int numInd = 0; numInd < num_ind; numInd++) {
             import_para(numInd);
             for (int i = 0; i < numSets; i++) {
-
-                Sobel(imgArr[i][0], sobelX[i], CV_64F, 1, 0, sizeSobel);
-                Sobel(imgArr[i][0], sobelY[i], CV_64F, 0, 1, sizeSobel);
-                magnitude(sobelX[i], sobelY[i], gradientMagnitude[i]);
-                normalize(gradientMagnitude[i], normalizedGradient[i], 0, 255, NORM_MINMAX, CV_8U);
-                printf("ENTER-TESTING\n");
-                imgShow("test1", normalizedGradient[i]);
-                circleInfo[i] = circleDetect(normalizedGradient[i]);
-                threshold(normalizedGradient[i], biImg[i], thresh, 255, THRESH_BINARY);
-
-                for (int y = 0; y < biImg[i].rows; y++) {
-                    for (int x = 0; x < biImg[i].cols; x++) {
-                        if (comDistance(y, x, circleInfo[i]) == 0) {
-                            biImg[i].at<uchar>(y, x) = 0;
-                        }
-                        else if (comDistance(y, x, circleInfo[i]) == 1) {
-                            biImg[i].at<uchar>(y, x) = 255;
-                        }
-                        else {
-                            biImg[i].at<uchar>(y, x) = biImg[i].at<uchar>(y, x) == 0 ? 255 : 0;
+                gradCal(imgArr[i][0], edges_s1[i]);
+                threshold(edges_s1[i], biImg[i], thresh, 255, THRESH_BINARY);
+                vector<Vec3f> circles = circleDetect(biImg[i]);
+                if (circles.size() != 0) {
+                    for (int y = 0; y < biImg[i].rows; y++) {
+                        for (int x = 0; x < biImg[i].cols; x++) {
+                            if (comDistance(y, x, circles[0]) == 0) {
+                                biImg[i].at<uchar>(y, x) = 0;
+                            }
+                            else if (comDistance(y, x, circles[0]) == 1) {
+                                biImg[i].at<uchar>(y, x) = 255;
+                            }
+                            else {
+                                biImg[i].at<uchar>(y, x) = biImg[i].at<uchar>(y, x) == 0 ? 255 : 0;
+                            }
                         }
                     }
                 }
-                // cvtColor(biImg[i], biImg[i], COLOR_GRAY2BGR);
+                medianBlur(biImg[i], blurImg_mask[i], 3);
+                if (erodeFlag) {
+                    Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+                    for (int i = 0; i < erodeTimes; i++) {
+                        erode(blurImg_mask[i], blurImg_mask[i], kernel);
+                    }
+                }
+                vector<vector<Point>> contours;
+                findContours(blurImg_mask[i], contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+                Mat mask = Mat::zeros(blurImg_mask[i].size(), CV_8UC1);
+                for (const auto& contour : contours) {
+                    Rect bounding_box = boundingRect(contour);
+                    double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+                    if ((aspect_ratio < (1 - aspectRatio * 0.1) || aspect_ratio >(1 + aspectRatio * 0.1)) && cv::contourArea(contour) < 100 * contPixNums) {
+                        drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+                    }
+                }
+                if (circles.size() != 0) {
+                    for (int y = 0; y < biImg[i].rows; y++) {
+                        for (int x = 0; x < biImg[i].cols; x++) {
+                            if (comDistance(y, x, circles[0]) == 2) {
+                                if (mask.at<uchar>(y, x) == 255) {
+                                    biImg[i].at<uchar>(y, x) = 255;
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
             Mat tarImg[numSets];
             Mat maskImg[numSets];
             for (int i = 0; i < numSets; i++) {
                 tarImg[i] = imgArr[i][1];
                 maskImg[i] = imgArr[i][2];
             }
-
             calculateMetrics(biImg, tarImg, maskImg, numInd, numGen);
         }
 
@@ -474,7 +457,7 @@ void multiProcess(Mat imgArr[][3]) {
     for (int i = 0; i < num_gen; i++) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
-    fprintf(fl_params, "%d %d %d %d %d %d\n", offsetOuter, offsetInner, thresh, sigmaVal, sizeSobel, sizeGaussian);
+    fprintf(fl_params, "%d %d %d %d %d %d %d\n", thresh, sizeGaussian, offset, erodeFlag, erodeTimes, aspectRatio, contPixNums);
     for (int i = 0; i <= numSets; i++) {
         fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
     }
@@ -501,10 +484,10 @@ int main(void) {
                 imgArr[i][j] = imread(inputPathName_ori, 0);
             }
             else if (j == 1) {
-                imgArr[i][j] = imread(inputPathName_tar);
+                imgArr[i][j] = imread(inputPathName_tar, 0);
             }
             else {
-                imgArr[i][j] = imread(inputPathName_mask);
+                imgArr[i][j] = imread(inputPathName_mask, 0);
             }
         }
     }
