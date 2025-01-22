@@ -11,7 +11,7 @@ using namespace cv;
 int thresh = 17; // [0, 255] -> dv01 - 8bit
 int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int offset = 9; // [0, 15] -> dv03 - 4bit
-int erodeFlag = 1; // -> dv04 - 1bit
+int erodeFlag = 0; // -> dv04 - 1bit
 int erodeTimes = 2; // -> dv05 - 2bit 
 int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
 int contPixNums = 7; // [0, 7] -> dv07 - 3bit

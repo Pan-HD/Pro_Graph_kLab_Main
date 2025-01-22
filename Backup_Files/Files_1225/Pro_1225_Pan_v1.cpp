@@ -8,13 +8,13 @@ using namespace std;
 using namespace cv;
 
 // #define RAND_MAX 32767 // the max value of random number
-#define numSets 2 // the num of sets(pairs)
+#define numSets 1 // the num of sets(pairs)
 #define numDV 7 // the nums of decision-variables
 #define chLen 21 // the length of chromosome
-#define num_ind 100 // the nums of individuals in the group
+#define num_ind 30 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
-#define cross 0.9 // the rate of cross
-#define mut 0.2 // the rate of mutation
+#define cross 0.95 // the rate of cross
+#define mut 0.5 // the rate of mutation
 
 
 // for storing the index of the individual with max f-value
@@ -106,8 +106,11 @@ void import_para(int ko) {
         sizeGaussian = 9 + 2 * h[ko][1].fitness;
     }
     else {
-        int oddStats[] = { 9, 11, 13, 15, 17, 19, 21, 23, 25 };
-        sizeGaussian = oddStats[rand() % 9];
+        //int oddStats[] = { 9, 11, 13, 15, 17, 19, 21, 23, 25 };
+        //sizeGaussian = oddStats[rand() % 9];
+        do {
+            sizeGaussian = rand() % 17 + 9;
+        } while (sizeGaussian % 2 == 0);
     }
     // dv03 ... dv07
     offset = h[ko][2].fitness;
@@ -375,6 +378,14 @@ void multiProcess(Mat imgArr[][3]) {
         return;
     }
 
+    // for storing the value of the elite-ind of each ind
+    FILE* fl_testing = nullptr;
+    errno_t err3 = fopen_s(&fl_testing, "./imgs_1225_v1/output/test_dv_ind.txt", "a");
+    if (err3 != 0 || fl_testing == nullptr) {
+        perror("Cannot open the file");
+        return;
+    }
+
     srand((unsigned)time(NULL));
     gene g[num_ind]; // For storing the group of individuals
     gene elite[10]; // For storing the elite individual of each generation
@@ -441,6 +452,7 @@ void multiProcess(Mat imgArr[][3]) {
                 maskImg[i] = imgArr[i][2];
             }
             calculateMetrics(biImg, tarImg, maskImg, numInd, numGen);
+            fprintf(fl_testing, "%d %d %d %d %d %d %d\n", thresh, sizeGaussian, offset, erodeFlag, erodeTimes, aspectRatio, contPixNums);
         }
 
         fitness(g, elite, numGen);
@@ -475,6 +487,7 @@ void multiProcess(Mat imgArr[][3]) {
     fclose(fl_fValue);
     fclose(fl_params);
     fclose(fl_maxFval);
+    fclose(fl_testing);
 }
 
 int main(void) {
