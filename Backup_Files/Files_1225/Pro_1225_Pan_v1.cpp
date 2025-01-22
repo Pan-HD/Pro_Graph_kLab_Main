@@ -10,9 +10,9 @@ using namespace cv;
 // #define RAND_MAX 32767 // the max value of random number
 #define numSets 2 // the num of sets(pairs)
 #define numDV 7 // the nums of decision-variables
-#define chLen 22 // the length of chromosome
+#define chLen 21 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
-#define num_gen 150 // the nums of generation of the GA algorithm
+#define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.9 // the rate of cross
 #define mut 0.2 // the rate of mutation
 
@@ -20,7 +20,7 @@ using namespace cv;
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3 };
+int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
 
 // the declaration of 7 decision variables
 int thresh = 17; // [0, 255] -> dv01 - 8bit
@@ -99,8 +99,17 @@ void phenotype(gene* g)
 }
 
 void import_para(int ko) {
-    thresh = h[ko][0].fitness;
-    sizeGaussian = h[ko][1].fitness * 2 + 1;
+    // dv01
+    thresh = h[ko][0].fitness <= 14 ? 11 + h[ko][0].fitness : 11 + rand() % 15;
+    // dv02
+    if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
+        sizeGaussian = 9 + 2 * h[ko][1].fitness;
+    }
+    else {
+        int oddStats[] = { 9, 11, 13, 15, 17, 19, 21, 23, 25 };
+        sizeGaussian = oddStats[rand() % 9];
+    }
+    // dv03 ... dv07
     offset = h[ko][2].fitness;
     erodeFlag = h[ko][3].fitness;
     erodeTimes = h[ko][4].fitness;
