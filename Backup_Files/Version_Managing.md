@@ -40,6 +40,7 @@
     - ```BcpFiles -> Files_1225 -> ..._v1```
       - **Main Process01 - Multipul picture (large spot in GA) - 15**
         - testing
+          - new method (×) wait for deeply debug
     - ```BcpFiles -> Files_0114 -> ..._v1```
       - For testing the full-search of single set
   - Fold
