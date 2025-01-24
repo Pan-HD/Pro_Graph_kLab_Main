@@ -7,27 +7,35 @@
 using namespace std;
 using namespace cv;
 
+//// #define RAND_MAX 32767 // the max value of random number
+//#define numSets 1 // the num of sets(pairs)
+//#define numDV 7 // the nums of decision-variables
+//#define chLen 21 // the length of chromosome
+//#define num_ind 30 // the nums of individuals in the group
+//#define num_gen 100 // the nums of generation of the GA algorithm
+//#define cross 0.95 // the rate of cross
+//#define mut 0.5 // the rate of mutation
+
 // #define RAND_MAX 32767 // the max value of random number
-#define numSets 1 // the num of sets(pairs)
-#define numDV 7 // the nums of decision-variables
 #define chLen 21 // the length of chromosome
 #define num_ind 30 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
-#define cross 0.95 // the rate of cross
-#define mut 0.5 // the rate of mutation
+#define cross 0.8 // the rate of cross
+#define mut 0.05 // the rate of mutation
+#define numSets 2 // the num of sets(pairs)
 
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
+// int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
 
 // the declaration of 7 decision variables
 int thresh = 17; // [0, 255] -> dv01 - 8bit
 int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int offset = 9; // [0, 15] -> dv03 - 4bit
 int erodeFlag = 1; // -> dv04 - 1bit
-int erodeTimes = 2; // -> dv05 - 2bit 
+int erodeTimes = 1; // -> dv05 - 2bit 
 int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
 int contPixNums = 7; // [0, 7] -> dv07 - 3bit
 
@@ -46,7 +54,8 @@ typedef struct {
 }genInfoType;
 
 // for storing the fitness value of 7 decision variables
-gene h[num_ind][numDV];
+//gene h[num_ind][numDV];
+gene h[num_ind][7];
 
 // for storing the info of each generation
 genInfoType genInfo[num_gen];
@@ -74,26 +83,98 @@ void make(gene* g)
   function: Convert the decision variable information in the chromosome corresponding to each individual
             from binary to decimal and store it in the h array
 */
+//void phenotype(gene* g)
+//{
+//    int i = 0, j = 0, k = 0;
+//    // initializing the fitness in h-array by assigning 0
+//    for (j = 0; j < num_ind; j++) {
+//        for (i = 0; i < numDV; i++) {
+//            h[j][i].fitness = 0;
+//        }
+//    }
+//
+//    for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
+//        int curIdx_chrom = 0;
+//        for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
+//            int len_curDv = info_dv_arr[idx_dv];
+//            int sum_val = 0;
+//            for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
+//                sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - idx - 1));
+//            }
+//            h[idxInd][idx_dv].fitness = sum_val;
+//            curIdx_chrom += len_curDv;
+//        }
+//    }
+//}
+
 void phenotype(gene* g)
 {
     int i = 0, j = 0, k = 0;
     // initializing the fitness in h-array by assigning 0
     for (j = 0; j < num_ind; j++) {
-        for (i = 0; i < numDV; i++) {
+        for (i = 0; i < 7; i++) {
             h[j][i].fitness = 0;
         }
     }
 
-    for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
-        int curIdx_chrom = 0;
-        for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
-            int len_curDv = info_dv_arr[idx_dv];
-            int sum_val = 0;
-            for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
-                sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - idx - 1));
+    for (j = 0; j < num_ind; j++) {
+        // thresh - 4 bits
+        i = 4;
+        for (k = 0; k < 4; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][0].fitness += (int)pow(2.0, (double)i);
             }
-            h[idxInd][idx_dv].fitness = sum_val;
-            curIdx_chrom += len_curDv;
+        }
+        // sizeGaussian - 4 bits
+        i = 4;
+        for (k = 4; k < 8; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][1].fitness += (int)pow(2.0, (double)i);
+            }
+        }
+
+        // offset - 4 bit
+        i = 4;
+        for (k = 8; k < 12; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][2].fitness += (int)pow(2.0, (double)i);
+            }
+        }
+
+        // erodeFlag - 1 bit
+        i = 1;
+        for (k = 12; k < 13; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][3].fitness += (int)pow(2.0, (double)i);
+            }
+        }
+        // erodeTimes - 2 bits
+        i = 2;
+        for (k = 13; k < 15; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][4].fitness += (int)pow(2.0, (double)i);
+            }
+        }
+        // aspectRatio - 3 bit
+        i = 3;
+        for (k = 15; k < 18; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][5].fitness += (int)pow(2.0, (double)i);
+            }
+        }
+        // contPixNums - 3 bit
+        i = 3;
+        for (k = 18; k < 21; k++) {
+            i--;
+            if (g[j].ch[k] == 1) {
+                h[j][6].fitness += (int)pow(2.0, (double)i);
+            }
         }
     }
 }
@@ -115,6 +196,7 @@ void import_para(int ko) {
     // dv03 ... dv07
     offset = h[ko][2].fitness;
     erodeFlag = h[ko][3].fitness;
+    //erodeFlag = 0;
     erodeTimes = h[ko][4].fitness;
     aspectRatio = h[ko][5].fitness;
     contPixNums = h[ko][6].fitness;
@@ -416,13 +498,15 @@ void multiProcess(Mat imgArr[][3]) {
                         }
                     }
                 }
+
                 medianBlur(biImg[i], blurImg_mask[i], 3);
                 if (erodeFlag) {
                     Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-                    for (int i = 0; i < erodeTimes; i++) {
+                    for (int idxET = 0; idxET < erodeTimes; idxET++) {
                         erode(blurImg_mask[i], blurImg_mask[i], kernel);
                     }
                 }
+
                 vector<vector<Point>> contours;
                 findContours(blurImg_mask[i], contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
                 Mat mask = Mat::zeros(blurImg_mask[i].size(), CV_8UC1);
