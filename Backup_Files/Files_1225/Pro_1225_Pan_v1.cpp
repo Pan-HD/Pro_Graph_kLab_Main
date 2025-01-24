@@ -7,28 +7,19 @@
 using namespace std;
 using namespace cv;
 
-//// #define RAND_MAX 32767 // the max value of random number
-//#define numSets 1 // the num of sets(pairs)
-//#define numDV 7 // the nums of decision-variables
-//#define chLen 21 // the length of chromosome
-//#define num_ind 30 // the nums of individuals in the group
-//#define num_gen 100 // the nums of generation of the GA algorithm
-//#define cross 0.95 // the rate of cross
-//#define mut 0.5 // the rate of mutation
-
 // #define RAND_MAX 32767 // the max value of random number
+#define numSets 2 // the num of sets(pairs)
+#define numDV 7 // the nums of decision-variables
 #define chLen 21 // the length of chromosome
-#define num_ind 30 // the nums of individuals in the group
+#define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
-#define numSets 2 // the num of sets(pairs)
-
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-// int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
+int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
 
 // the declaration of 7 decision variables
 int thresh = 17; // [0, 255] -> dv01 - 8bit
@@ -55,7 +46,7 @@ typedef struct {
 
 // for storing the fitness value of 7 decision variables
 //gene h[num_ind][numDV];
-gene h[num_ind][7];
+gene h[num_ind][numDV];
 
 // for storing the info of each generation
 genInfoType genInfo[num_gen];
@@ -83,98 +74,26 @@ void make(gene* g)
   function: Convert the decision variable information in the chromosome corresponding to each individual
             from binary to decimal and store it in the h array
 */
-//void phenotype(gene* g)
-//{
-//    int i = 0, j = 0, k = 0;
-//    // initializing the fitness in h-array by assigning 0
-//    for (j = 0; j < num_ind; j++) {
-//        for (i = 0; i < numDV; i++) {
-//            h[j][i].fitness = 0;
-//        }
-//    }
-//
-//    for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
-//        int curIdx_chrom = 0;
-//        for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
-//            int len_curDv = info_dv_arr[idx_dv];
-//            int sum_val = 0;
-//            for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
-//                sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - idx - 1));
-//            }
-//            h[idxInd][idx_dv].fitness = sum_val;
-//            curIdx_chrom += len_curDv;
-//        }
-//    }
-//}
-
 void phenotype(gene* g)
 {
-    int i = 0, j = 0, k = 0;
+    int i = 0, j = 0;
     // initializing the fitness in h-array by assigning 0
     for (j = 0; j < num_ind; j++) {
-        for (i = 0; i < 7; i++) {
+        for (i = 0; i < numDV; i++) {
             h[j][i].fitness = 0;
         }
     }
 
-    for (j = 0; j < num_ind; j++) {
-        // thresh - 4 bits
-        i = 4;
-        for (k = 0; k < 4; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][0].fitness += (int)pow(2.0, (double)i);
+    for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
+        int curIdx_chrom = 0;
+        for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
+            int len_curDv = info_dv_arr[idx_dv];
+            int sum_val = 0;
+            for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
+                sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - (idx - curIdx_chrom) - 1));
             }
-        }
-        // sizeGaussian - 4 bits
-        i = 4;
-        for (k = 4; k < 8; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][1].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-
-        // offset - 4 bit
-        i = 4;
-        for (k = 8; k < 12; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][2].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-
-        // erodeFlag - 1 bit
-        i = 1;
-        for (k = 12; k < 13; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][3].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-        // erodeTimes - 2 bits
-        i = 2;
-        for (k = 13; k < 15; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][4].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-        // aspectRatio - 3 bit
-        i = 3;
-        for (k = 15; k < 18; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][5].fitness += (int)pow(2.0, (double)i);
-            }
-        }
-        // contPixNums - 3 bit
-        i = 3;
-        for (k = 18; k < 21; k++) {
-            i--;
-            if (g[j].ch[k] == 1) {
-                h[j][6].fitness += (int)pow(2.0, (double)i);
-            }
+            h[idxInd][idx_dv].fitness = sum_val;
+            curIdx_chrom += len_curDv;
         }
     }
 }
@@ -187,8 +106,6 @@ void import_para(int ko) {
         sizeGaussian = 9 + 2 * h[ko][1].fitness;
     }
     else {
-        //int oddStats[] = { 9, 11, 13, 15, 17, 19, 21, 23, 25 };
-        //sizeGaussian = oddStats[rand() % 9];
         do {
             sizeGaussian = rand() % 17 + 9;
         } while (sizeGaussian % 2 == 0);
@@ -460,14 +377,6 @@ void multiProcess(Mat imgArr[][3]) {
         return;
     }
 
-    // for storing the value of the elite-ind of each ind
-    FILE* fl_testing = nullptr;
-    errno_t err3 = fopen_s(&fl_testing, "./imgs_1225_v1/output/test_dv_ind.txt", "a");
-    if (err3 != 0 || fl_testing == nullptr) {
-        perror("Cannot open the file");
-        return;
-    }
-
     srand((unsigned)time(NULL));
     gene g[num_ind]; // For storing the group of individuals
     gene elite[10]; // For storing the elite individual of each generation
@@ -536,7 +445,6 @@ void multiProcess(Mat imgArr[][3]) {
                 maskImg[i] = imgArr[i][2];
             }
             calculateMetrics(biImg, tarImg, maskImg, numInd, numGen);
-            fprintf(fl_testing, "%d %d %d %d %d %d %d\n", thresh, sizeGaussian, offset, erodeFlag, erodeTimes, aspectRatio, contPixNums);
         }
 
         fitness(g, elite, numGen);
@@ -571,7 +479,6 @@ void multiProcess(Mat imgArr[][3]) {
     fclose(fl_fValue);
     fclose(fl_params);
     fclose(fl_maxFval);
-    fclose(fl_testing);
 }
 
 int main(void) {
