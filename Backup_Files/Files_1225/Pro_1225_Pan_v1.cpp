@@ -16,6 +16,9 @@ using namespace cv;
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
 
+// for mark the selected set if the numSets been set of 1
+int idSet = 2;
+
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
@@ -452,19 +455,36 @@ void multiProcess(Mat imgArr[][3]) {
         mutation(g);
         elite_back(g, elite);
         printf("f_value: %.4f\n", elite[1].f_value);
+
         if (numGen % 10 == 0) {
-            for (int i = 0; i < numSets; i++) {
-                sprintf_s(imgName_pro[i], "./imgs_1225_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
-                imwrite(imgName_pro[i], biImg[i]);
+            if (numSets == 1) {
+                sprintf_s(imgName_pro[0], "./imgs_1225_v1/output/img_0%d/Gen-%d.png", idSet, numGen);
+                imwrite(imgName_pro[0], biImg[0]);
+            }
+            else {
+                for (int i = 0; i < numSets; i++) {
+                    sprintf_s(imgName_pro[i], "./imgs_1225_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
+                    imwrite(imgName_pro[i], biImg[i]);
+                }
             }
         }
     }
-    for (int i = 0; i < numSets; i++) {
-        vector<Mat> images = { biImg[i], imgArr[i][1], imgArr[i][2] };
+
+    if (numSets == 1) {
+        vector<Mat> images = { biImg[0], imgArr[0][1], imgArr[0][2] };
         Mat res;
         hconcat(images, res);
-        sprintf_s(imgName_final[i], "./imgs_1225_v1/output/img_0%d/imgs_final.png", i + 1);
-        imwrite(imgName_final[i], res);
+        sprintf_s(imgName_final[0], "./imgs_1225_v1/output/img_0%d/imgs_final.png", idSet);
+        imwrite(imgName_final[0], res);
+    }
+    else {
+        for (int i = 0; i < numSets; i++) {
+            vector<Mat> images = { biImg[i], imgArr[i][1], imgArr[i][2] };
+            Mat res;
+            hconcat(images, res);
+            sprintf_s(imgName_final[i], "./imgs_1225_v1/output/img_0%d/imgs_final.png", i + 1);
+            imwrite(imgName_final[i], res);
+        }
     }
 
     for (int i = 0; i < num_gen; i++) {
@@ -487,20 +507,38 @@ int main(void) {
     char inputPathName_tar[256];
     char inputPathName_mask[256];
 
-    for (int i = 0; i < numSets; i++) {
-        sprintf_s(inputPathName_ori, "./imgs_1225_v1/input/oriImg_0%d.png", i + 1);
-        sprintf_s(inputPathName_tar, "./imgs_1225_v1/input/tarImg_0%d.png", i + 1);
+    if (numSets == 1) {
+        sprintf_s(inputPathName_ori, "./imgs_1225_v1/input/oriImg_0%d.png", idSet);
+        sprintf_s(inputPathName_tar, "./imgs_1225_v1/input/tarImg_0%d.png", idSet);
         sprintf_s(inputPathName_mask, "./imgs_1225_v1/input/maskImg_general.png");
-
         for (int j = 0; j < 3; j++) {
             if (j == 0) {
-                imgArr[i][j] = imread(inputPathName_ori, 0);
+                imgArr[0][j] = imread(inputPathName_ori, 0);
             }
             else if (j == 1) {
-                imgArr[i][j] = imread(inputPathName_tar, 0);
+                imgArr[0][j] = imread(inputPathName_tar, 0);
             }
             else {
-                imgArr[i][j] = imread(inputPathName_mask, 0);
+                imgArr[0][j] = imread(inputPathName_mask, 0);
+            }
+        }
+    }
+    else {
+        for (int i = 0; i < numSets; i++) {
+            sprintf_s(inputPathName_ori, "./imgs_1225_v1/input/oriImg_0%d.png", i + 1);
+            sprintf_s(inputPathName_tar, "./imgs_1225_v1/input/tarImg_0%d.png", i + 1);
+            sprintf_s(inputPathName_mask, "./imgs_1225_v1/input/maskImg_general.png");
+
+            for (int j = 0; j < 3; j++) {
+                if (j == 0) {
+                    imgArr[i][j] = imread(inputPathName_ori, 0);
+                }
+                else if (j == 1) {
+                    imgArr[i][j] = imread(inputPathName_tar, 0);
+                }
+                else {
+                    imgArr[i][j] = imread(inputPathName_mask, 0);
+                }
             }
         }
     }

@@ -11,7 +11,7 @@ using namespace cv;
 int thresh = 17; // [0, 255] -> dv01 - 8bit
 int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int offset = 9; // [0, 15] -> dv03 - 4bit
-int erodeFlag = 0; // -> dv04 - 1bit
+int erodeFlag = 1; // -> dv04 - 1bit
 int erodeTimes = 2; // -> dv05 - 2bit 
 int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
 int contPixNums = 7; // [0, 7] -> dv07 - 3bit
@@ -59,7 +59,7 @@ int comDistance(int y, int x, Vec3f circle) {
 }
 
 int main(void) {
-	Mat oriImg = imread("./imgs_1220_v2/input/oriImg_04.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_02.png", IMREAD_GRAYSCALE);
 	//imgShow("res", oriImg);
 
 	Mat edges_s1;
@@ -72,7 +72,11 @@ int main(void) {
 
 	vector<Vec3f> circles = circleDetect(biImg); // GaussianSize
 
+
+
 	if (circles.size() != 0) { // stat-03
+		//printf("width: %d, height: %d\n", biImg.cols, biImg.rows);
+		//printf("radius: %d\n", (int)circles[0][2]);
 		for (int y = 0; y < biImg.rows; y++) {
 			for (int x = 0; x < biImg.cols; x++) {
 				if (comDistance(y, x, circles[0]) == 0) { // offset
