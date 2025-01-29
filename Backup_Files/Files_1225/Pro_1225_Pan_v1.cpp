@@ -7,10 +7,9 @@
 using namespace std;
 using namespace cv;
 
-// #define RAND_MAX 32767 // the max value of random number
 #define numSets 2 // the num of sets(pairs)
 #define numDV 7 // the nums of decision-variables
-#define chLen 21 // the length of chromosome
+#define chLen 25 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -22,16 +21,17 @@ int idSet = 2;
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-int info_dv_arr[numDV] = { 4, 4, 4, 1, 2, 3, 3 };
+// the allocated nums of bit of the decision-variables
+int info_dv_arr[numDV] = { 8, 4, 4, 1, 2, 3, 3 };
 
 // the declaration of 7 decision variables
-int thresh = 17; // [0, 255] -> dv01 - 8bit
-int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-int offset = 9; // [0, 15] -> dv03 - 4bit
-int erodeFlag = 1; // -> dv04 - 1bit
-int erodeTimes = 1; // -> dv05 - 2bit 
-int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
-int contPixNums = 7; // [0, 7] -> dv07 - 3bit
+int threshVal = 17; // [0, 255] -> dv01 - 8bit
+int gaussianSize = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int circleOffset = 9; // [0, 15] -> dv03 - 4bit
+int dilateFlag = 1; // -> dv04 - 1bit
+int dilateTimes = 1; // -> dv05 - 2bit 
+int aspectOffset = 1; // [0, 7] -> dv06 - 3bit
+int contourPixNums = 7; // [0, 7] -> dv07 - 3bit
 
 typedef struct {
     int ch[chLen]; // defining chromosomes by ch-array
@@ -48,7 +48,6 @@ typedef struct {
 }genInfoType;
 
 // for storing the fitness value of 7 decision variables
-//gene h[num_ind][numDV];
 gene h[num_ind][numDV];
 
 // for storing the info of each generation
@@ -103,23 +102,23 @@ void phenotype(gene* g)
 
 void import_para(int ko) {
     // dv01
-    thresh = h[ko][0].fitness <= 14 ? 11 + h[ko][0].fitness : 11 + rand() % 15;
+    threshVal = h[ko][0].fitness;
     // dv02
     if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
-        sizeGaussian = 9 + 2 * h[ko][1].fitness;
+        gaussianSize = 9 + 2 * h[ko][1].fitness;
     }
     else {
         do {
-            sizeGaussian = rand() % 17 + 9;
-        } while (sizeGaussian % 2 == 0);
+            gaussianSize = rand() % 17 + 9;
+        } while (gaussianSize % 2 == 0);
     }
     // dv03 ... dv07
-    offset = h[ko][2].fitness;
-    erodeFlag = h[ko][3].fitness;
+    circleOffset = h[ko][2].fitness;
+    dilateFlag = h[ko][3].fitness;
     //erodeFlag = 0;
-    erodeTimes = h[ko][4].fitness;
-    aspectRatio = h[ko][5].fitness;
-    contPixNums = h[ko][6].fitness;
+    dilateTimes = h[ko][4].fitness;
+    aspectOffset = h[ko][5].fitness;
+    contourPixNums = h[ko][6].fitness;
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -326,7 +325,7 @@ void gradCal(Mat& srcImg, Mat& dstImg) {
 
 vector<Vec3f> circleDetect(Mat img) {
     Mat blurred;
-    GaussianBlur(img, blurred, Size(sizeGaussian, sizeGaussian), 0, 0);
+    GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
     vector<Vec3f> circles;
     HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
     return circles;
@@ -340,7 +339,7 @@ int comDistance(int y, int x, Vec3f circle) {
     if (distance > radius) {
         return 0;
     }
-    else if (distance > radius - offset && distance <= radius) {
+    else if (distance > radius - circleOffset && distance <= radius) {
         return 1;
     }
     else {
@@ -393,7 +392,7 @@ void multiProcess(Mat imgArr[][3]) {
             import_para(numInd);
             for (int i = 0; i < numSets; i++) {
                 gradCal(imgArr[i][0], edges_s1[i]);
-                threshold(edges_s1[i], biImg[i], thresh, 255, THRESH_BINARY);
+                threshold(edges_s1[i], biImg[i], threshVal, 255, THRESH_BINARY);
                 vector<Vec3f> circles = circleDetect(biImg[i]);
                 if (circles.size() != 0) {
                     for (int y = 0; y < biImg[i].rows; y++) {
@@ -412,9 +411,9 @@ void multiProcess(Mat imgArr[][3]) {
                 }
 
                 medianBlur(biImg[i], blurImg_mask[i], 3);
-                if (erodeFlag) {
+                if (dilateFlag) {
                     Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-                    for (int idxET = 0; idxET < erodeTimes; idxET++) {
+                    for (int idxET = 0; idxET < dilateTimes; idxET++) {
                         erode(blurImg_mask[i], blurImg_mask[i], kernel);
                     }
                 }
@@ -425,7 +424,7 @@ void multiProcess(Mat imgArr[][3]) {
                 for (const auto& contour : contours) {
                     Rect bounding_box = boundingRect(contour);
                     double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
-                    if ((aspect_ratio < (1 - aspectRatio * 0.1) || aspect_ratio >(1 + aspectRatio * 0.1)) && cv::contourArea(contour) < 100 * contPixNums) {
+                    if ((aspect_ratio < (1 - aspectOffset * 0.1) || aspect_ratio >(1 + aspectOffset * 0.1)) && cv::contourArea(contour) < 100 * contourPixNums) {
                         drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
                     }
                 }
@@ -490,7 +489,7 @@ void multiProcess(Mat imgArr[][3]) {
     for (int i = 0; i < num_gen; i++) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
-    fprintf(fl_params, "%d %d %d %d %d %d %d\n", thresh, sizeGaussian, offset, erodeFlag, erodeTimes, aspectRatio, contPixNums);
+    fprintf(fl_params, "%d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums);
     for (int i = 0; i <= numSets; i++) {
         fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
     }
