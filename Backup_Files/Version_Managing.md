@@ -36,12 +36,14 @@
     - ```BcpFiles -> Files_1220 -> ..._v1```
       - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v2```
-      - **For generating the tarImg of large-spot image**
+      - **For generating the tarImg of large-spot image - Main**
     - ```BcpFiles -> Files_1225 -> ..._v1```
       - **Main Process01 - Multipul picture (large spot in GA) - 15**
         - master branch
     - ```BcpFiles -> Files_0114 -> ..._v1```
       - For testing the full-search of single set
+    - ```BcpFiles -> Files_0131_2025 -> ..._v1```
+      - **For generating the tarImg of large-spot image - Testing**
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
