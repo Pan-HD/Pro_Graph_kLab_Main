@@ -10,7 +10,7 @@ using namespace cv;
 int thresh = 17; // [0, 255] -> dv01 - 8bit
 int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int offset = 9; // [0, 15] -> dv03 - 4bit
-int erodeFlag = 1; // -> dv04 - 1bit
+int erodeFlag = 0; // -> dv04 - 1bit
 int erodeTimes = 2; // -> dv05 - 2bit 
 int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
 int contPixNums = 7; // [0, 7] -> dv07 - 3bit
@@ -98,7 +98,7 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 int main(void) {
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
-	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_02.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
 	// imgShow("res", oriImg);
 
 	Mat edges_s1;
@@ -132,7 +132,7 @@ int main(void) {
 	Mat blurImg_mask_s1;
 	medianBlur(biImg, blurImg_mask_s1, 3);
 	if (erodeFlag) {
-		// For img-04
+		// For img-02
 		Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 		for (int i = 0; i < erodeTimes; i++) {
 			erode(blurImg_mask_s1, blurImg_mask_s1, kernel);
@@ -145,7 +145,7 @@ int main(void) {
 	contourProcess(blurImg_mask_s1, biImg, aspectRatio, 100 * contPixNums, circles, 1);
 	// imgShow("res", biImg);
 
-	// Note-biImg(in stat-01): in the resImg, only the large-spot and several small noise remains, so it could be 
+	// Note-biImg(in stat-02): in the resImg, only the large-spot and several small noise remains, so it could be 
 	//                         processed by findContours directly.
 	Mat metaImg = biImg.clone();
 	for (int i = 0; i < erodeTimes_s2; i++) {
@@ -153,8 +153,8 @@ int main(void) {
 	}
 	// imgShow("meta", metaImg);
 
-	contourProcess(metaImg, biImg, 0, 300, 100 * contPixNums_s2, 0);
-	// imgShow("res", biImg);
+	contourProcess(metaImg, biImg, 0, 100 * contPixNums_s2, circles, 0);
+	imgShow("res", biImg);
 
 	return 0;
 }

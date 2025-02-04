@@ -43,7 +43,8 @@
     - ```BcpFiles -> Files_0114 -> ..._v1```
       - For testing the full-search of single set
     - ```BcpFiles -> Files_0131_2025 -> ..._v1```
-      - **For generating the tarImg of large-spot image with perfect res - Testing**
+      - **For generating the tarImg of large-spot image (with perfect res) - Sub**
+        - finished
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
