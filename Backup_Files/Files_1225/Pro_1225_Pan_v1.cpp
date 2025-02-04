@@ -7,22 +7,20 @@
 using namespace std;
 using namespace cv;
 
-#define numSets 2 // the num of sets(pairs)
-#define numDV 7 // the nums of decision-variables
-#define chLen 25 // the length of chromosome
+#define numSets 1 // the num of sets(pairs)
+#define idSet 2 // for mark the selected set if the numSets been set of 1
+#define numDV 9 // the nums of decision-variables
+#define chLen 27 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
 
-// for mark the selected set if the numSets been set of 1
-int idSet = 2;
-
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
 // the allocated nums of bit of the decision-variables
-int info_dv_arr[numDV] = { 8, 4, 4, 1, 2, 3, 3 };
+int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3, 2, 3 };
 
 // the declaration of 7 decision variables
 int threshVal = 17; // [0, 255] -> dv01 - 8bit
@@ -32,6 +30,8 @@ int dilateFlag = 1; // -> dv04 - 1bit
 int dilateTimes = 1; // -> dv05 - 2bit 
 int aspectOffset = 1; // [0, 7] -> dv06 - 3bit
 int contourPixNums = 7; // [0, 7] -> dv07 - 3bit
+int dilateTimes_s2 = 1; // [0, 3] -> dv08 - 2bit
+int contourPixNums_s2 = 3; // [0, 7] -> dv09 - 3bit
 
 typedef struct {
     int ch[chLen]; // defining chromosomes by ch-array
@@ -119,6 +119,8 @@ void import_para(int ko) {
     dilateTimes = h[ko][4].fitness;
     aspectOffset = h[ko][5].fitness;
     contourPixNums = h[ko][6].fitness;
+    dilateTimes_s2 = h[ko][7].fitness;
+    contourPixNums_s2 = h[ko][8].fitness;
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -347,10 +349,49 @@ int comDistance(int y, int x, Vec3f circle) {
     }
 }
 
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles, int aspectFlag) {
+    vector<vector<Point>> contours;
+    findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+    Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
+    for (const auto& contour : contours) {
+        Rect bounding_box = boundingRect(contour);
+        double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+        if (aspectFlag) {
+            if ((aspect_ratio < (1 - aspectRatio * 0.1) || aspect_ratio >(1 + aspectRatio * 0.1)) && cv::contourArea(contour) < pixNums) {
+                drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+            }
+        }
+        else { // just need to focus on the proportions(areas), since the probability of the aspect_ratio equals "1.0000"
+            // when the second time to find contours (without long-slender ribon inside)
+            if (cv::contourArea(contour) < pixNums) {
+                drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+            }
+        }
+
+    }
+    // imgShow("mask", mask);
+
+    if (circles.size() != 0) {
+        for (int y = 0; y < resImg.rows; y++) {
+            for (int x = 0; x < resImg.cols; x++) {
+                if (comDistance(y, x, circles[0]) == 2) {
+                    if (mask.at<uchar>(y, x) == 255) {
+                        resImg.at<uchar>(y, x) = 255;
+                    }
+                }
+            }
+        }
+    }
+    // imgShow("res", resImg);
+}
+
 void multiProcess(Mat imgArr[][3]) {
     Mat edges_s1[numSets];
     Mat biImg[numSets];
     Mat blurImg_mask[numSets];
+    Mat metaImg[numSets];
+
+    Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 
     char imgName_pro[numSets][256];
     char imgName_final[numSets][256];
@@ -412,33 +453,16 @@ void multiProcess(Mat imgArr[][3]) {
 
                 medianBlur(biImg[i], blurImg_mask[i], 3);
                 if (dilateFlag) {
-                    Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
                     for (int idxET = 0; idxET < dilateTimes; idxET++) {
                         erode(blurImg_mask[i], blurImg_mask[i], kernel);
                     }
                 }
-
-                vector<vector<Point>> contours;
-                findContours(blurImg_mask[i], contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-                Mat mask = Mat::zeros(blurImg_mask[i].size(), CV_8UC1);
-                for (const auto& contour : contours) {
-                    Rect bounding_box = boundingRect(contour);
-                    double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
-                    if ((aspect_ratio < (1 - aspectOffset * 0.1) || aspect_ratio >(1 + aspectOffset * 0.1)) && cv::contourArea(contour) < 100 * contourPixNums) {
-                        drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
-                    }
+                contourProcess(blurImg_mask[i], biImg[i], aspectOffset, 100 * contourPixNums, circles, 1);
+                metaImg[i] = biImg[i].clone();
+                for (int idxET = 0; idxET < dilateTimes_s2; idxET++) {
+                    erode(metaImg[i], metaImg[i], kernel);
                 }
-                if (circles.size() != 0) {
-                    for (int y = 0; y < biImg[i].rows; y++) {
-                        for (int x = 0; x < biImg[i].cols; x++) {
-                            if (comDistance(y, x, circles[0]) == 2) {
-                                if (mask.at<uchar>(y, x) == 255) {
-                                    biImg[i].at<uchar>(y, x) = 255;
-                                }
-                            }
-                        }
-                    }
-                }
+                contourProcess(metaImg[i], biImg[i], 0, 100 * contourPixNums_s2, circles, 0);
             }
             Mat tarImg[numSets];
             Mat maskImg[numSets];
@@ -489,7 +513,7 @@ void multiProcess(Mat imgArr[][3]) {
     for (int i = 0; i < num_gen; i++) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
-    fprintf(fl_params, "%d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums);
+    fprintf(fl_params, "%d %d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums, dilateTimes_s2, contourPixNums_s2);
     for (int i = 0; i <= numSets; i++) {
         fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
     }
