@@ -38,8 +38,15 @@
     - ```BcpFiles -> Files_1220 -> ..._v2```
       - **For generating the tarImg of large-spot image (with defect res) - Main**
     - ```BcpFiles -> Files_1225 -> ..._v1```
-      - **Main Process01 - Multipul picture (large spot in GA) - 15**
-        - master branch
+      - **Main Process01 - Multipul picture (large spot in GA) **
+        - master branch - with perfect res
+    - ```BcpFiles -> Files_0210_2025 -> ..._v1```
+      - **Main Process01 - Multipul picture (large spot in GA) **
+        - master branch - with defect res
+    - ```BcpFiles -> Files_0210_2025 -> ..._v2```
+      - **Main Process01 - Multipul picture (large spot in GA) **
+        - master branch - with defect res
+        - for vertifying the function of gaussianBlur and medianBlur
     - ```BcpFiles -> Files_0114 -> ..._v1```
       - For testing the full-search of single set
     - ```BcpFiles -> Files_0131_2025 -> ..._v1```

@@ -9,8 +9,13 @@ using namespace cv;
 
 #define numSets 1 // the num of sets(pairs)
 #define idSet 2 // for mark the selected set if the numSets been set of 1
-#define numDV 9 // the nums of decision-variables
-#define chLen 27 // the length of chromosome
+
+// been modified (#define numDV 9 // the nums of decision-variables)
+#define numDV 8 // the nums of decision-variables
+
+// been modified (#define chLen 27 // the length of chromosome)
+#define chLen 29 // the length of chromosome
+
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -20,18 +25,22 @@ using namespace cv;
 int curMaxFvalIdx = 0;
 
 // the allocated nums of bit of the decision-variables
-int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3, 2, 3 };
+// been modified (int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3, 2, 3 };)
+int info_dv_arr[numDV] = { 8, 4, 4, 4, 1, 2, 3, 3 };
 
-// the declaration of 9 decision variables
+// the declaration of 8 decision variables
 int threshVal = 17; // [0, 255] -> dv01 - 8bit
-int gaussianSize = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int circleOffset = 9; // [0, 15] -> dv03 - 4bit
-int dilateFlag = 1; // -> dv04 - 1bit
-int dilateTimes = 1; // -> dv05 - 2bit 
-int aspectOffset = 1; // [0, 7] -> dv06 - 3bit
-int contourPixNums = 7; // [0, 7] -> dv07 - 3bit
-int dilateTimes_s2 = 1; // [0, 3] -> dv08 - 2bit
-int contourPixNums_s2 = 3; // [0, 7] -> dv09 - 3bit
+int medianSize = 3; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv04 - 4bit
+int dilateFlag = 1; // -> dv05 - 1bit
+int dilateTimes = 1; // -> dv06 - 2bit 
+int aspectOffset = 1; // [0, 7] -> dv07 - 3bit
+int contourPixNums = 7; // [0, 7] -> dv08 - 3bit
+
+// been modified 
+//int dilateTimes_s2 = 1; // [0, 3] -> dv08 - 2bit
+//int contourPixNums_s2 = 3; // [0, 7] -> dv09 - 3bit
 
 typedef struct {
     int ch[chLen]; // defining chromosomes by ch-array
@@ -104,23 +113,23 @@ void import_para(int ko) {
     // dv01
     threshVal = h[ko][0].fitness;
     // dv02
-    if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
-        gaussianSize = 9 + 2 * h[ko][1].fitness;
-    }
-    else {
-        do {
-            gaussianSize = rand() % 17 + 9;
-        } while (gaussianSize % 2 == 0);
-    }
-    // dv03 ... dv07
+    gaussianSize = h[ko][1].fitness * 2 + 1;
+    // dv03
     circleOffset = h[ko][2].fitness;
-    dilateFlag = h[ko][3].fitness;
-    //erodeFlag = 0;
-    dilateTimes = h[ko][4].fitness;
-    aspectOffset = h[ko][5].fitness;
-    contourPixNums = h[ko][6].fitness;
-    dilateTimes_s2 = h[ko][7].fitness;
-    contourPixNums_s2 = h[ko][8].fitness;
+    // dv04
+    medianSize = h[ko][3].fitness * 2 + 1;
+    // dv05
+    dilateFlag = h[ko][4].fitness;
+    // dv06
+    dilateTimes = h[ko][5].fitness;
+    // dv07
+    aspectOffset = h[ko][6].fitness;
+    // dv08
+    contourPixNums = h[ko][7].fitness;
+
+    // been modified
+    //dilateTimes_s2 = h[ko][7].fitness;
+    //contourPixNums_s2 = h[ko][8].fitness;
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -398,7 +407,7 @@ void multiProcess(Mat imgArr[][3]) {
 
     // for recording the f_value of every generation (max, min, ave, dev)
     FILE* fl_fValue = nullptr;
-    errno_t err = fopen_s(&fl_fValue, "./imgs_1225_v1/output/f_value.txt", "a");
+    errno_t err = fopen_s(&fl_fValue, "./imgs_0210_2025_v1/output/f_value.txt", "a");
     if (err != 0 || fl_fValue == nullptr) {
         perror("Cannot open the file");
         return;
@@ -406,7 +415,7 @@ void multiProcess(Mat imgArr[][3]) {
 
     // for recording the decision varibles
     FILE* fl_params = nullptr;
-    errno_t err1 = fopen_s(&fl_params, "./imgs_1225_v1/output/params.txt", "a");
+    errno_t err1 = fopen_s(&fl_params, "./imgs_0210_2025_v1/output/params.txt", "a");
     if (err1 != 0 || fl_params == nullptr) {
         perror("Cannot open the file");
         return;
@@ -414,7 +423,7 @@ void multiProcess(Mat imgArr[][3]) {
 
     // for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
     FILE* fl_maxFval = nullptr;
-    errno_t err2 = fopen_s(&fl_maxFval, "./imgs_1225_v1/output/maxFvalInfo_final.txt", "a");
+    errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0210_2025_v1/output/maxFvalInfo_final.txt", "a");
     if (err2 != 0 || fl_maxFval == nullptr) {
         perror("Cannot open the file");
         return;
@@ -451,18 +460,21 @@ void multiProcess(Mat imgArr[][3]) {
                     }
                 }
 
-                medianBlur(biImg[i], blurImg_mask[i], 3);
+                medianBlur(biImg[i], blurImg_mask[i], medianSize);
                 if (dilateFlag) {
                     for (int idxET = 0; idxET < dilateTimes; idxET++) {
                         erode(blurImg_mask[i], blurImg_mask[i], kernel);
                     }
                 }
                 contourProcess(blurImg_mask[i], biImg[i], aspectOffset, 100 * contourPixNums, circles, 1);
-                metaImg[i] = biImg[i].clone();
-                for (int idxET = 0; idxET < dilateTimes_s2; idxET++) {
-                    erode(metaImg[i], metaImg[i], kernel);
-                }
-                contourProcess(metaImg[i], biImg[i], 0, 100 * contourPixNums_s2, circles, 0);
+
+                // been modified
+                //metaImg[i] = biImg[i].clone();
+                //for (int idxET = 0; idxET < dilateTimes_s2; idxET++) {
+                //    erode(metaImg[i], metaImg[i], kernel);
+                //}
+                //contourProcess(metaImg[i], biImg[i], 0, 100 * contourPixNums_s2, circles, 0);
+
             }
             Mat tarImg[numSets];
             Mat maskImg[numSets];
@@ -481,12 +493,12 @@ void multiProcess(Mat imgArr[][3]) {
 
         if (numGen % 10 == 0) {
             if (numSets == 1) {
-                sprintf_s(imgName_pro[0], "./imgs_1225_v1/output/img_0%d/Gen-%d.png", idSet, numGen);
+                sprintf_s(imgName_pro[0], "./imgs_0210_2025_v1/output/img_0%d/Gen-%d.png", idSet, numGen);
                 imwrite(imgName_pro[0], biImg[0]);
             }
             else {
                 for (int i = 0; i < numSets; i++) {
-                    sprintf_s(imgName_pro[i], "./imgs_1225_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
+                    sprintf_s(imgName_pro[i], "./imgs_0210_2025_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
                     imwrite(imgName_pro[i], biImg[i]);
                 }
             }
@@ -497,7 +509,7 @@ void multiProcess(Mat imgArr[][3]) {
         vector<Mat> images = { biImg[0], imgArr[0][1], imgArr[0][2] };
         Mat res;
         hconcat(images, res);
-        sprintf_s(imgName_final[0], "./imgs_1225_v1/output/img_0%d/imgs_final.png", idSet);
+        sprintf_s(imgName_final[0], "./imgs_0210_2025_v1/output/img_0%d/imgs_final.png", idSet);
         imwrite(imgName_final[0], res);
     }
     else {
@@ -505,7 +517,7 @@ void multiProcess(Mat imgArr[][3]) {
             vector<Mat> images = { biImg[i], imgArr[i][1], imgArr[i][2] };
             Mat res;
             hconcat(images, res);
-            sprintf_s(imgName_final[i], "./imgs_1225_v1/output/img_0%d/imgs_final.png", i + 1);
+            sprintf_s(imgName_final[i], "./imgs_0210_2025_v1/output/img_0%d/imgs_final.png", i + 1);
             imwrite(imgName_final[i], res);
         }
     }
@@ -513,7 +525,11 @@ void multiProcess(Mat imgArr[][3]) {
     for (int i = 0; i < num_gen; i++) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
-    fprintf(fl_params, "%d %d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums, dilateTimes_s2, contourPixNums_s2);
+
+    // been modified
+    // (fprintf(fl_params, "%d %d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums, dilateTimes_s2, contourPixNums_s2);)
+    fprintf(fl_params, "%d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, medianSize, dilateFlag, dilateTimes, aspectOffset, contourPixNums);
+
     for (int i = 0; i <= numSets; i++) {
         fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
     }
@@ -531,9 +547,9 @@ int main(void) {
     char inputPathName_mask[256];
 
     if (numSets == 1) {
-        sprintf_s(inputPathName_ori, "./imgs_1225_v1/input/oriImg_0%d.png", idSet);
-        sprintf_s(inputPathName_tar, "./imgs_1225_v1/input/tarImg_0%d.png", idSet);
-        sprintf_s(inputPathName_mask, "./imgs_1225_v1/input/maskImg_general.png");
+        sprintf_s(inputPathName_ori, "./imgs_0210_2025_v1/input/oriImg_0%d.png", idSet);
+        sprintf_s(inputPathName_tar, "./imgs_0210_2025_v1/input/tarImg_0%d.png", idSet);
+        sprintf_s(inputPathName_mask, "./imgs_0210_2025_v1/input/maskImg_general.png");
         for (int j = 0; j < 3; j++) {
             if (j == 0) {
                 imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -548,9 +564,9 @@ int main(void) {
     }
     else {
         for (int i = 0; i < numSets; i++) {
-            sprintf_s(inputPathName_ori, "./imgs_1225_v1/input/oriImg_0%d.png", i + 1);
-            sprintf_s(inputPathName_tar, "./imgs_1225_v1/input/tarImg_0%d.png", i + 1);
-            sprintf_s(inputPathName_mask, "./imgs_1225_v1/input/maskImg_general.png");
+            sprintf_s(inputPathName_ori, "./imgs_0210_2025_v1/input/oriImg_0%d.png", i + 1);
+            sprintf_s(inputPathName_tar, "./imgs_0210_2025_v1/input/tarImg_0%d.png", i + 1);
+            sprintf_s(inputPathName_mask, "./imgs_0210_2025_v1/input/maskImg_general.png");
 
             for (int j = 0; j < 3; j++) {
                 if (j == 0) {
