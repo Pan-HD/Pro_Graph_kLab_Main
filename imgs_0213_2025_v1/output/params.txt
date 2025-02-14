@@ -1,1 +1,1 @@
-Stat: 11, deci-vari: 17 13 11 0 3 4
+Stat: 11, deci-vari: 17 23 11 3 0 2 4
