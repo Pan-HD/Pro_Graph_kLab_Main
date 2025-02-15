@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 #define numSets 1 // the num of sets(pairs)
-#define idSet 1 // for mark the selected set if the numSets been set of 1
+#define idSet 2 // for mark the selected set if the numSets been set of 1
 
 // been modified (#define numDV 9 // the nums of decision-variables)
 #define numDV 7 // the nums of decision-variables
@@ -17,9 +17,9 @@ using namespace cv;
 #define chLen 28 // the length of chromosome
 
 #define num_ind 100 // the nums of individuals in the group
-#define num_gen 100 // the nums of generation of the GA algorithm
+#define num_gen 150 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
-#define mut 0.05 // the rate of mutation
+#define mut 0.15 // the rate of mutation
 #define gaussianBlurFlag 1
 #define medianBlurFlag 1
 
@@ -115,15 +115,15 @@ void import_para(int ko) {
     // dv01
     threshVal = h[ko][0].fitness;
     // dv02
-    if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
-        gaussianSize = 9 + 2 * h[ko][1].fitness;
-    }
-    else {
-        do {
-            gaussianSize = rand() % 17 + 9;
-        } while (gaussianSize % 2 == 0);
-    }
-    // gaussianSize = h[ko][1].fitness * 2 + 1;
+    //if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
+    //    gaussianSize = 9 + 2 * h[ko][1].fitness;
+    //}
+    //else {
+    //    do {
+    //        gaussianSize = rand() % 17 + 9;
+    //    } while (gaussianSize % 2 == 0);
+    //}
+    gaussianSize = h[ko][1].fitness * 2 + 1;
     // dv03
     circleOffset = h[ko][2].fitness;
     // dv04

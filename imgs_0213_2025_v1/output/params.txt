@@ -1,1 +1,8 @@
 Stat: 11, deci-vari: 17 23 11 3 0 2 4
+Stat: 00, deci-vari: 51 17 2 19 2 3 0
+Stat: 01, deci-vari: 115 15 1 31 0 6 3
+Stat: 10, deci-vari: 17 15 11 27 2 0 6
+Stat: 11, deci-vari: 17 13 9 3 3 0 7
+Stat: 11, deci-vari: 17 21 12 5 1 1 5
+Stat: 11, deci-vari: 17 21 13 3 0 1 4
+Stat: 11, deci-vari: 3 19 11 3 1 0 0
