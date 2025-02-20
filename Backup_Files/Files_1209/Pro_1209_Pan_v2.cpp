@@ -7,13 +7,16 @@
 using namespace std;
 using namespace cv;
 
-#define RAND_MAX 32767 // the max value of random number
+// #define RAND_MAX 32767 // the max value of random number
 #define chLen 26 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
 #define numSets 4 // the num of sets(pairs)
+
+// for storing the index of the individual with max f-value
+int curMaxFvalIdx = 0;
 
 // the declaration of 8 decision variables
 int fsize = 0;
@@ -44,6 +47,9 @@ gene h[num_ind][8];
 
 // for storing the info of each generation
 genInfoType genInfo[num_gen];
+
+// for storing the f-value of every individual in the group
+double indFvalInfo[num_ind][numSets + 1];
 
 void imgShow(const string& name, const Mat& img) {
     imshow(name, img);
@@ -216,10 +222,9 @@ Mat Morphology(Mat img, int isDilFirst) {
         erode(dst, dst, Mat());
     }
     else {
-        erode(dst, dst, Mat());
-        dilate(img, dst, Mat());
+        erode(img, dst, Mat());
+        dilate(dst, dst, Mat());
     }
-
     return dst;
 }
 
@@ -250,6 +255,9 @@ void calculateMetrics(Mat metaImg[], Mat tarImg[], Mat maskImg[], int numInd, in
                 if (metaImg_g[k].at<uchar>(i, j) == 0 && tarImg_g[k].at<uchar>(i, j) == 0) {
                     tp += 1;
                 }
+                //if (metaImg_g[k].at<uchar>(i, j) == 1 && tarImg_g[k].at<uchar>(i, j) == 1) {
+                //    tp += 1;
+                //}
                 if (metaImg_g[k].at<uchar>(i, j) == 0 && tarImg_g[k].at<uchar>(i, j) == 255) {
                     fp += 1;
                 }
@@ -261,15 +269,23 @@ void calculateMetrics(Mat metaImg[], Mat tarImg[], Mat maskImg[], int numInd, in
         if (tp == 0) tp += 1;
         if (fp == 0) fp += 1;
         if (fn == 0) fn += 1;
+
+        // For Testing
+        printf("tp: %d, fp: %d, fn: %d\n", tp, fp, fn);
+
         double precision = (tp + fp > 0) ? tp / double(tp + fp) : 0.0;
         double recall = (tp + fn > 0) ? tp / double(tp + fn) : 0.0;
         f1_score[k] = calculateF1Score(precision, recall);
     }
     double sum_f1 = 0.0;
     for (int i = 0; i < numSets; i++) {
+        indFvalInfo[numInd][i] = f1_score[i];
         sum_f1 += f1_score[i];
     }
-    h[numInd][0].f_value = sum_f1 / numSets;
+
+    // h[numInd][0].f_value = sum_f1 / numSets;
+    h[numInd][0].f_value = sum_f1;
+    indFvalInfo[numInd][numSets] = sum_f1;
 }
 
 void fitness(gene* g, gene* elite, int se) // for storing the info of elite individual
@@ -293,7 +309,7 @@ void fitness(gene* g, gene* elite, int se) // for storing the info of elite indi
             minFValue = h[i][0].f_value;
         }
     }
-
+    curMaxFvalIdx = maxFValueIndex;
     elite[1].f_value = maxFValue;
     for (j = 0; j < chLen; j++) {
         elite[1].ch[j] = g[maxFValueIndex].ch[j];
@@ -420,9 +436,9 @@ void elite_back(gene* g, gene* elite) {
 }
 
 void multiProcess(Mat imgArr[][3]) {
-    Mat blurImg[numSets];
-    Mat diffImg[numSets];
-    Mat biImg[numSets];
+    Mat blurImg[numSets]; //
+    Mat diffImg[numSets]; // 
+    Mat biImg[numSets]; // 
     Mat labelImg[numSets];
 
     char imgName_pro[numSets][256];
@@ -430,7 +446,7 @@ void multiProcess(Mat imgArr[][3]) {
 
     // for recording the f_value
     FILE* fl_fValue = nullptr;
-    errno_t err = fopen_s(&fl_fValue, "./imgs_1209_v1/output/f_value.txt", "a");
+    errno_t err = fopen_s(&fl_fValue, "./imgs_1209_v2/output/f_value.txt", "a");
     if (err != 0 || fl_fValue == nullptr) {
         perror("Cannot open the file");
         return;
@@ -438,8 +454,15 @@ void multiProcess(Mat imgArr[][3]) {
 
     // for recording the decision varibles
     FILE* fl_params = nullptr;
-    errno_t err1 = fopen_s(&fl_params, "./imgs_1209_v1/output/params.txt", "a");
+    errno_t err1 = fopen_s(&fl_params, "./imgs_1209_v2/output/params.txt", "a");
     if (err1 != 0 || fl_params == nullptr) {
+        perror("Cannot open the file");
+        return;
+    }
+
+    FILE* fl_maxFval = nullptr;
+    errno_t err2 = fopen_s(&fl_maxFval, "./imgs_1209_v2/output/maxFvalInfo_final.txt", "a");
+    if (err2 != 0 || fl_maxFval == nullptr) {
         perror("Cannot open the file");
         return;
     }
@@ -450,10 +473,12 @@ void multiProcess(Mat imgArr[][3]) {
     elite[1].f_value = 0.0;
     make(g); // Initializing the info of chrom of 100 individuals
 
-    for (int numGen = 1; numGen <= num_gen; numGen++) {
+    //for (int numGen = 1; numGen <= num_gen; numGen++) {
+    for (int numGen = 1; numGen <= 1; numGen++) {
         cout << "-------generation: " << numGen << "---------" << endl;
         phenotype(g);
-        for (int numInd = 0; numInd < num_ind; numInd++) {
+        // for (int numInd = 0; numInd < num_ind; numInd++) {
+        for (int numInd = 0; numInd < 1; numInd++) {
             import_para(numInd);
             for (int i = 0; i < numSets; i++) {
                 // bluring
@@ -473,11 +498,12 @@ void multiProcess(Mat imgArr[][3]) {
                 {
                     labelImg[i] = labeling(biImg[i], 8);
                 }
+
                 // Morphology
                 if (!erodedilate_sequence)
                 {
                     if (erodedilate_times != 0) {
-                        for (int i = 0; i < erodedilate_times; i++)
+                        for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
                         {
                             labelImg[i] = Morphology(labelImg[i], 1);
                         }
@@ -486,7 +512,7 @@ void multiProcess(Mat imgArr[][3]) {
                 else
                 {
                     if (erodedilate_times != 0) {
-                        for (int i = 0; i < erodedilate_times; i++)
+                        for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
                         {
                             labelImg[i] = Morphology(labelImg[i], 0);
                         }
@@ -499,6 +525,16 @@ void multiProcess(Mat imgArr[][3]) {
                 tarImg[i] = imgArr[i][1];
                 maskImg[i] = imgArr[i][2];
             }
+
+            // TESTING...
+            //imgShow("testing", labelImg[0]);
+            //imgShow("testing", tarImg[0]);
+            //imgShow("testing", maskImg[0]);
+
+            //printf("nums of channels: %d\n", labelImg[0].channels());
+            //printf("nums of channels: %d\n", tarImg[0].channels());
+            //printf("nums of channels: %d\n", maskImg[0].channels());
+
             calculateMetrics(labelImg, tarImg, maskImg, numInd, numGen);
         }
 
@@ -509,7 +545,7 @@ void multiProcess(Mat imgArr[][3]) {
         printf("f_value: %.4f, binary: %d\n", elite[1].f_value, binary);
         if (numGen % 10 == 0) {
             for (int i = 0; i < numSets; i++) {
-                sprintf_s(imgName_pro[i], "./imgs_1209_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
+                sprintf_s(imgName_pro[i], "./imgs_1209_v2/output/img_0%d/Gen-%d.png", i + 1, numGen);
                 imwrite(imgName_pro[i], labelImg[i]);
             }
         }
@@ -518,7 +554,7 @@ void multiProcess(Mat imgArr[][3]) {
         vector<Mat> images = { labelImg[i], imgArr[i][1], imgArr[i][2] };
         Mat res;
         hconcat(images, res);
-        sprintf_s(imgName_final[i], "./imgs_1209_v1/output/img_0%d/imgs_final.png", i + 1);
+        sprintf_s(imgName_final[i], "./imgs_1209_v2/output/img_0%d/imgs_final.png", i + 1);
         imwrite(imgName_final[i], res);
     }
 
@@ -526,9 +562,14 @@ void multiProcess(Mat imgArr[][3]) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
     fprintf(fl_params, "%d %d %d %d %d %d %d %d\n", fsize, binary, linear, filterswitch_flag, erodedilate_times, erodedilate_sequence, abusolute_flag, pixellabelingmethod);
+    for (int i = 0; i <= numSets; i++) {
+        fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
+    }
+    fprintf(fl_maxFval, "\n");
 
     fclose(fl_fValue);
     fclose(fl_params);
+    fclose(fl_maxFval);
 }
 
 int main(void) {
@@ -537,12 +578,10 @@ int main(void) {
     char inputPathName_tar[256];
     char inputPathName_mask[256];
 
-
-
     for (int i = 0; i < numSets; i++) {
-        sprintf_s(inputPathName_ori, "./imgs_1209_v1/input/oriImg_0%d.png", i + 1);
-        sprintf_s(inputPathName_tar, "./imgs_1209_v1/input/tarImg_0%d.png", i + 1);
-        sprintf_s(inputPathName_mask, "./imgs_1209_v1/input/maskImg_general.png");
+        sprintf_s(inputPathName_ori, "./imgs_1209_v2/input/oriImg_0%d.png", i + 1);
+        sprintf_s(inputPathName_tar, "./imgs_1209_v2/input/tarImg_0%d.png", i + 1);
+        sprintf_s(inputPathName_mask, "./imgs_1209_v2/input/maskImg_general.png");
 
         for (int j = 0; j < 3; j++) {
             if (j == 0) {
