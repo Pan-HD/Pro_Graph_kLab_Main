@@ -7,14 +7,16 @@
 using namespace std;
 using namespace cv;
 
-/* fit for img_03 */
-int thresh = 17; // [0, 255] -> dv01 - 8bit
-int sizeGaussian = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-int offset = 9; // [0, 15] -> dv03 - 4bit
-int erodeFlag = 1; // -> dv04 - 1bit
-int erodeTimes = 2; // -> dv05 - 2bit 
-int aspectRatio = 1; // [0, 7] -> dv06 - 3bit
-int contPixNums = 7; // [0, 7] -> dv07 - 3bit
+int threshVal = 17; // [0, 255] -> dv01 - 8bit
+int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int circleOffset = 9; // [0, 15] -> dv03 - 4bit
+int medianSize = 3; // -> dv04 - 4bit
+int dilateTimes_t1 = 1; // -> dv05 - 2bit 
+int aspectOffset_t1 = 1; // [0, 7] -> dv06 - 3bit
+int contourPixNums_t1 = 7; // [0, 7] -> dv07 - 3bit
+int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
+int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
+int contourPixNums_t2 = 3; // [0, 7] -> dv10 - 3bit
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -22,8 +24,10 @@ void imgShow(const string& name, const Mat& img) {
 	destroyAllWindows();
 }
 
+/*
+  function: Sobel processing
+*/
 void gradCal(Mat& srcImg, Mat& dstImg) {
-	// Sobel Detecting
 	Mat sobelX, sobelY, gradientMagnitude;
 	Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
 	Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
@@ -33,10 +37,7 @@ void gradCal(Mat& srcImg, Mat& dstImg) {
 
 vector<Vec3f> circleDetect(Mat img) {
 	Mat blurred;
-	GaussianBlur(img, blurred, Size(sizeGaussian, sizeGaussian), 0, 0);
-
-	// imgShow("GauBlur in circleDetect", blurred);
-
+	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
 	vector<Vec3f> circles;
 	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
 	return circles;
@@ -50,12 +51,39 @@ int comDistance(int y, int x, Vec3f circle) {
 	if (distance > radius) {
 		return 0;
 	}
-	else if (distance > radius - offset && distance <= radius) {
+	else if (distance > radius - circleOffset && distance <= radius) {
 		return 1;
 	}
 	else {
 		return 2;
 	}
+}
+
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles) {
+	vector<vector<Point>> contours;
+	findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+	Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
+	for (const auto& contour : contours) {
+		Rect bounding_box = boundingRect(contour);
+		double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+		if ((aspect_ratio <= (1 - aspectRatio * 0.1) || aspect_ratio > (1 + aspectRatio * 0.1)) && cv::contourArea(contour) < pixNums) {
+			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+		}
+	}
+	// imgShow("mask", mask);
+
+	if (circles.size() != 0) {
+		for (int y = 0; y < resImg.rows; y++) {
+			for (int x = 0; x < resImg.cols; x++) {
+				if (comDistance(y, x, circles[0]) == 2) {
+					if (mask.at<uchar>(y, x) == 255) {
+						resImg.at<uchar>(y, x) = 255;
+					}
+				}
+			}
+		}
+	}
+	// imgShow("res", resImg);
 }
 
 int main(void) {
@@ -67,16 +95,12 @@ int main(void) {
 	//imgShow("res", edges_s1);
 
 	Mat biImg;
-	threshold(edges_s1, biImg, thresh, 255, THRESH_BINARY); // stat-02 -> threshold
+	threshold(edges_s1, biImg, threshVal, 255, THRESH_BINARY); // stat-02 -> threshold
 	// imgShow("res", biImg);
 
 	vector<Vec3f> circles = circleDetect(biImg); // GaussianSize
 
-
-
 	if (circles.size() != 0) { // stat-03
-		//printf("width: %d, height: %d\n", biImg.cols, biImg.rows);
-		//printf("radius: %d\n", (int)circles[0][2]);
 		for (int y = 0; y < biImg.rows; y++) {
 			for (int x = 0; x < biImg.cols; x++) {
 				if (comDistance(y, x, circles[0]) == 0) { // offset
@@ -95,6 +119,7 @@ int main(void) {
 
 	Mat blurImg_mask;
 	medianBlur(biImg, blurImg_mask, 3);
+
 	if (erodeFlag) {
 		// For img-04
 		Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));

@@ -9,8 +9,8 @@ using namespace cv;
 
 #define numSets 1 // the num of sets(pairs)
 #define idSet 2 // for mark the selected set if the numSets been set of 1
-#define numDV 9 // the nums of decision-variables
-#define chLen 27 // the length of chromosome
+#define numDV 10 // the nums of decision-variables
+#define chLen 36 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -20,18 +20,21 @@ using namespace cv;
 int curMaxFvalIdx = 0;
 
 // the allocated nums of bit of the decision-variables
-int info_dv_arr[numDV] = { 5, 4, 4, 1, 2, 3, 3, 2, 3 };
+int info_dv_arr[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
 
 // the declaration of 9 decision variables
 int threshVal = 17; // [0, 255] -> dv01 - 8bit
-int gaussianSize = 17; // (n * 2 + 1) 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
 int circleOffset = 9; // [0, 15] -> dv03 - 4bit
-int dilateFlag = 1; // -> dv04 - 1bit
-int dilateTimes = 1; // -> dv05 - 2bit 
-int aspectOffset = 1; // [0, 7] -> dv06 - 3bit
-int contourPixNums = 7; // [0, 7] -> dv07 - 3bit
-int dilateTimes_s2 = 1; // [0, 3] -> dv08 - 2bit
-int contourPixNums_s2 = 3; // [0, 7] -> dv09 - 3bit
+// for explaining: the dv of medianSize can only set to 3 due to the huge affect to the whole system
+//                 design to test the 2 diff types of the dv for vertifying the explain
+int medianSize = 3; // -> dv04 - 4bit
+int dilateTimes_t1 = 1; // -> dv05 - 2bit 
+int aspectOffset_t1 = 1; // [0, 7] -> dv06 - 3bit
+int contourPixNums_t1 = 7; // [0, 7] -> dv07 - 3bit
+int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
+int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
+int contourPixNums_t2 = 3; // [0, 7] -> dv10 - 3bit
 
 typedef struct {
     int ch[chLen]; // defining chromosomes by ch-array
@@ -47,7 +50,7 @@ typedef struct {
     double genDevFValue;
 }genInfoType;
 
-// for storing the fitness value of 7 decision variables
+// for storing the fitness value of 10 decision variables
 gene h[num_ind][numDV];
 
 // for storing the info of each generation
@@ -104,23 +107,24 @@ void import_para(int ko) {
     // dv01
     threshVal = h[ko][0].fitness;
     // dv02
-    if (h[ko][1].fitness >= 0 && h[ko][1].fitness <= 8) {
-        gaussianSize = 9 + 2 * h[ko][1].fitness;
-    }
-    else {
-        do {
-            gaussianSize = rand() % 17 + 9;
-        } while (gaussianSize % 2 == 0);
-    }
-    // dv03 ... dv07
+    gaussianSize = h[ko][1].fitness * 2 + 1;
+    // dv03
     circleOffset = h[ko][2].fitness;
-    dilateFlag = h[ko][3].fitness;
-    //erodeFlag = 0;
-    dilateTimes = h[ko][4].fitness;
-    aspectOffset = h[ko][5].fitness;
-    contourPixNums = h[ko][6].fitness;
-    dilateTimes_s2 = h[ko][7].fitness;
-    contourPixNums_s2 = h[ko][8].fitness;
+    // dv04
+    // medianSize = h[ko][3].fitness * 2 + 1;
+    medianSize = 3;
+    // dv05
+    dilateTimes_t1 = h[ko][4].fitness;
+    // dv06
+    aspectOffset_t1 = h[ko][5].fitness;
+    // dv07
+    contourPixNums_t1 = h[ko][6].fitness;
+    // dv08
+    dilateTimes_t2 = h[ko][7].fitness;
+    // dv09
+    aspectOffset_t2 = h[ko][8].fitness;
+    // dv10
+    contourPixNums_t2 = h[ko][9].fitness;
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -162,7 +166,6 @@ void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numI
         sum_f1 += f1_score[i];
     }
 
-    // h[numInd][0].f_value = sum_f1 / numSets;
     h[numInd][0].f_value = sum_f1;
     indFvalInfo[numInd][numSets] = sum_f1;
 }
@@ -349,25 +352,16 @@ int comDistance(int y, int x, Vec3f circle) {
     }
 }
 
-void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles, int aspectFlag) {
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles) {
     vector<vector<Point>> contours;
     findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
     Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
     for (const auto& contour : contours) {
         Rect bounding_box = boundingRect(contour);
         double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
-        if (aspectFlag) {
-            if ((aspect_ratio < (1 - aspectRatio * 0.1) || aspect_ratio >(1 + aspectRatio * 0.1)) && cv::contourArea(contour) < pixNums) {
-                drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
-            }
+        if ((aspect_ratio <= (1 - aspectRatio * 0.1) || aspect_ratio > (1 + aspectRatio * 0.1)) && cv::contourArea(contour) < pixNums) {
+            drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
         }
-        else { // just need to focus on the proportions(areas), since the probability of the aspect_ratio equals "1.0000"
-            // when the second time to find contours (without long-slender ribon inside)
-            if (cv::contourArea(contour) < pixNums) {
-                drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
-            }
-        }
-
     }
     // imgShow("mask", mask);
 
@@ -451,18 +445,18 @@ void multiProcess(Mat imgArr[][3]) {
                     }
                 }
 
-                medianBlur(biImg[i], blurImg_mask[i], 3);
-                if (dilateFlag) {
-                    for (int idxET = 0; idxET < dilateTimes; idxET++) {
-                        erode(blurImg_mask[i], blurImg_mask[i], kernel);
-                    }
+                medianBlur(biImg[i], blurImg_mask[i], medianSize);
+
+                for (int idxET = 0; idxET < dilateTimes_t1; idxET++) {
+                    erode(blurImg_mask[i], blurImg_mask[i], kernel);
                 }
-                contourProcess(blurImg_mask[i], biImg[i], aspectOffset, 100 * contourPixNums, circles, 1);
+                contourProcess(blurImg_mask[i], biImg[i], aspectOffset_t1, 100 * contourPixNums_t1, circles);
+
                 metaImg[i] = biImg[i].clone();
-                for (int idxET = 0; idxET < dilateTimes_s2; idxET++) {
+                for (int idxET = 0; idxET < dilateTimes_t2; idxET++) {
                     erode(metaImg[i], metaImg[i], kernel);
                 }
-                contourProcess(metaImg[i], biImg[i], 0, 100 * contourPixNums_s2, circles, 0);
+                contourProcess(metaImg[i], biImg[i], aspectOffset_t2, 100 * contourPixNums_t2, circles);
             }
             Mat tarImg[numSets];
             Mat maskImg[numSets];
@@ -513,7 +507,7 @@ void multiProcess(Mat imgArr[][3]) {
     for (int i = 0; i < num_gen; i++) {
         fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
     }
-    fprintf(fl_params, "%d %d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, dilateFlag, dilateTimes, aspectOffset, contourPixNums, dilateTimes_s2, contourPixNums_s2);
+    fprintf(fl_params, "%d %d %d %d %d %d %d %d %d %d\n", threshVal, gaussianSize, circleOffset, medianSize, dilateTimes_t1, aspectOffset_t1, contourPixNums_t1, dilateTimes_t2, aspectOffset_t2, contourPixNums_t2);
     for (int i = 0; i <= numSets; i++) {
         fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
     }
