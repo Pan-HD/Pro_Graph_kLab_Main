@@ -20,33 +20,33 @@
     - ```BcpFiles -> Files_1107 -> ..._v2```
     - ```BcpFiles -> Files_1207 -> ..._v1```
     - ```BcpFiles -> Files_1209 -> ..._v2```
-      - **Main Process - Multipul picture**
-        - **GA - MainPart - Perfect - Testing**
+      - Main Process - Multipul picture
+        - GA - MainPart - Perfect - Testing
     - ```BcpFiles -> Files_1210 -> ..._v1```
     - ```BcpFiles -> Files_1211 -> ..._v1```
-      - **Main Process01 - Multipul picture - 11**
-        - **GA - MainPart**
+      - Main Process01 - Multipul picture - 11
+        - GA - MainPart
     - ```BcpFiles -> Files_1212 -> ..._v1```
     - ```BcpFiles -> Files_1213 -> ..._v1```
       - FullSearch
     - ```BcpFiles -> Files_1216 -> ..._v1```
-      - **Main Process02 - Multipul picture - 13**
-        - **GA - Decision Tree**
+      - Main Process02 - Multipul picture - 13
+        - GA - Decision Tree
     - ```BcpFiles -> Files_1216 -> ..._v2```
-      - **Main Process03 - Multipul picture - 14**
-        - **GA - FullSearch - Divided**
+      - Main Process03 - Multipul picture - 14
+        - GA - FullSearch - Divided
     - ```BcpFiles -> Files_1220 -> ..._v1```
       - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v2```
-      - **For generating the tarImg of large-spot image (with defect res) - Main**
+      - For generating the tarImg of large-spot image (with defect res) - Main
     - ```BcpFiles -> Files_1225 -> ..._v1```
       - **Main Process01 - Multipul picture (large spot in GA) **
         - master branch - with perfect res
     - ```BcpFiles -> Files_0210_2025 -> ..._v1```
-      - **Main Process01 - Multipul picture (large spot in GA) **
+      - Main Process01 - Multipul picture (large spot in GA) 
         - master branch - with defect res
     - ```BcpFiles -> Files_0210_2025 -> ..._v2```
-      - **Main Process01 - Multipul picture (large spot in GA) **
+      - Main Process01 - Multipul picture (large spot in GA) 
         - master branch - with defect res
         - for vertifying the function of gaussianBlur and medianBlur
     - ```BcpFiles -> Files_0213_2025 -> ..._v1```

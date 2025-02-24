@@ -8,28 +8,28 @@ using namespace std;
 using namespace cv;
 
 // for Set-01
-//int threshVal = 17; // [0, 255] -> dv01 - 8bit
-//int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-//int circleOffset = 9; // [0, 15] -> dv03 - 4bit
-//int medianSize = 3; // -> dv04 - 4bit
-//int dilateTimes_t1 = 0; // -> dv05 - 2bit 
-//int aspectOffset_t1 = 3; // [0, 7] -> dv06 - 3bit
-//int contourPixNums_t1 = 5; // [0, 7] -> dv07 - 3bit
-//int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
-//int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
-//int contourPixNums_t2 = 5; // [0, 7] -> dv10 - 3bit
-
-// for Set-02
 int threshVal = 17; // [0, 255] -> dv01 - 8bit
 int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-int circleOffset = 9; // [0, 15] -> dv03 - 4bit
+int circleOffset = 10; // [0, 15] -> dv03 - 4bit
 int medianSize = 3; // -> dv04 - 4bit
-int dilateTimes_t1 = 1; // -> dv05 - 2bit 
-int aspectOffset_t1 = 3; // [0, 7] -> dv06 - 3bit
-int contourPixNums_t1 = 5; // [0, 7] -> dv07 - 3bit
+int dilateTimes_t1 = 0; // -> dv05 - 2bit 
+int aspectOffset_t1 = 1; // [0, 7] -> dv06 - 3bit
+int contourPixNums_t1 = 7; // [0, 7] -> dv07 - 3bit
 int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
 int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
 int contourPixNums_t2 = 5; // [0, 7] -> dv10 - 3bit
+
+// for Set-02
+//int threshVal = 17; // [0, 255] -> dv01 - 8bit
+//int gaussianSize = 11; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
+//int circleOffset = 8; // [0, 15] -> dv03 - 4bit
+//int medianSize = 3; // -> dv04 - 4bit
+//int dilateTimes_t1 = 1; // -> dv05 - 2bit 
+//int aspectOffset_t1 = 2; // [0, 7] -> dv06 - 3bit
+//int contourPixNums_t1 = 3; // [0, 7] -> dv07 - 3bit
+//int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
+//int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
+//int contourPixNums_t2 = 4; // [0, 7] -> dv10 - 3bit
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -100,7 +100,7 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 }
 
 int main(void) {
-	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_02.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
 	//imgShow("res", oriImg);
 
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
