@@ -18,13 +18,13 @@ using namespace cv;
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-// the declaration of 8 decision variables
-int fsize = 0;
-int binary = 0;
-int linear = 0;
-int filterswitch_flag;
-int erodedilate_times;
-int erodedilate_sequence = 0;
+// the declaration of 8 decision variables (with the sum-fVal of 3.5645)
+int fsize = 1;
+int binary = 193;
+int linear = 5;
+int filterswitch_flag = 0;
+int erodedilate_times = 5;
+int erodedilate_sequence = 1;
 int abusolute_flag = 0;
 int pixellabelingmethod = 0;
 

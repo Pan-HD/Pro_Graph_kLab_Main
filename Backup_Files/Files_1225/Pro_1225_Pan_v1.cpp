@@ -412,12 +412,7 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 }
 
 void multiProcess(Mat imgArr[][3]) {
-	Mat edges_s1[numSets];
-	Mat biImg[numSets];
-	Mat blurImg_mask[numSets];
-	Mat metaImg[numSets];
-
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat resImg[numSets];
 
 	char imgName_pro[numSets][256];
 	char imgName_final[numSets][256];
@@ -459,38 +454,7 @@ void multiProcess(Mat imgArr[][3]) {
 		for (int numInd = 0; numInd < num_ind; numInd++) {
 			import_para(numInd);
 			for (int i = 0; i < numSets; i++) {
-				gradCal(imgArr[i][0], edges_s1[i]);
-				threshold(edges_s1[i], biImg[i], info_val_dv[0], 255, THRESH_BINARY);
-
-				vector<Vec3f> circles = circleDetect(biImg[i], info_val_dv[1]);
-				if (circles.size() != 0) {
-					for (int y = 0; y < biImg[i].rows; y++) {
-						for (int x = 0; x < biImg[i].cols; x++) {
-							if (comDistance(y, x, circles[0], info_val_dv[2]) == 0) {
-								biImg[i].at<uchar>(y, x) = 0;
-							}
-							else if (comDistance(y, x, circles[0], info_val_dv[2]) == 1) {
-								biImg[i].at<uchar>(y, x) = 255;
-							}
-							else {
-								biImg[i].at<uchar>(y, x) = biImg[i].at<uchar>(y, x) == 0 ? 255 : 0;
-							}
-						}
-					}
-				}
-
-				medianBlur(biImg[i], blurImg_mask[i], info_val_dv[3]);
-
-				for (int idxET = 0; idxET < info_val_dv[4]; idxET++) {
-					erode(blurImg_mask[i], blurImg_mask[i], kernel);
-				}
-				contourProcess(blurImg_mask[i], biImg[i], info_val_dv[5], 100 * info_val_dv[6], circles, info_val_dv[2]);
-
-				metaImg[i] = biImg[i].clone();
-				for (int idxET = 0; idxET < info_val_dv[7]; idxET++) {
-					erode(metaImg[i], metaImg[i], kernel);
-				}
-				contourProcess(metaImg[i], biImg[i], info_val_dv[8], 100 * info_val_dv[9], circles, info_val_dv[2]);
+				imgSingleProcess(imgArr[i][0], resImg[i], info_val_dv);
 			}
 			Mat tarImg[numSets];
 			Mat maskImg[numSets];
@@ -498,7 +462,7 @@ void multiProcess(Mat imgArr[][3]) {
 				tarImg[i] = imgArr[i][1];
 				maskImg[i] = imgArr[i][2];
 			}
-			calculateMetrics(biImg, tarImg, maskImg, numInd, numGen);
+			calculateMetrics(resImg, tarImg, maskImg, numInd, numGen);
 		}
 
 		fitness(g, elite, numGen);
