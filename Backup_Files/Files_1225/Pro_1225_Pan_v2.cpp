@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 #define numSets 1 // the num of sets(pairs)
-#define idSet 1 // for mark the selected set if the numSets been set of 1
+#define idSet 2 // for mark the selected set if the numSets been set of 1
 #define numDV 10 // the nums of decision-variables
 #define chLen 36 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
@@ -16,31 +16,10 @@ using namespace cv;
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
 
-// for storing the index of the individual with max f-value
-int curMaxFvalIdx = 0;
-
-// the allocated nums of bit of the decision-variables
-int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
-
-// adding - 02
-int groupDvMapArr[num_ind][numDV];
-
-int info_val_dv[numDV];
-// String info_name_dv[numDV] = { "threshVal", "gaussianSize", "circleOffset", "medianSize", "dilateTimes_t1", "aspectOffset_t1", "contourPixNums_t1", "dilateTimes_t2", "aspectOffset_t2", "contourPixNums_t2" };
-
-typedef struct {
-	int ch[chLen]; // defining chromosomes by ch-array
-	int fitness;
-	double f_value; // the harmonic mean of precision and recall of the individual
-}gene;
-
-// adding-01
-// int groupChromArr[num_ind][chLen];
 typedef struct {
 	int chrom[chLen];
 	double f_value;
 }indInfoType;
-indInfoType group[num_ind];
 
 // the info of each generation, including the info of elite individual and the info of the group
 typedef struct {
@@ -52,13 +31,17 @@ typedef struct {
 	int arr_val_dv[numDV]; // for storing the value of DV of elite-ind in each generation
 }genInfoType;
 
-int groupDvInfoArr[num_ind][numDV];
-
-// for storing the fitness value of 10 decision variables
-gene h[num_ind][numDV];
-
-// for storing the info of each generation
+indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
+
+// for storing the index of the individual with max f-value
+int curMaxFvalIdx = 0;
+
+// the allocated nums of bit of the decision-variables
+int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
+int groupDvMapArr[num_ind][numDV];
+int info_val_dv[numDV];
+int groupDvInfoArr[num_ind][numDV];
 
 // for storing the f-value of every individual in the group
 double indFvalInfo[num_ind][numSets + 1];
@@ -69,17 +52,8 @@ void imgShow(const string& name, const Mat& img) {
 	destroyAllWindows();
 }
 
-void make(gene* g)
+void make()
 {
-	//
-	for (int j = 0; j < num_ind; j++) {
-		for (int i = 0; i < chLen; i++) {
-			if (rand() > (RAND_MAX + 1) / 2) g[j].ch[i] = 1;
-			else g[j].ch[i] = 0;
-		}
-	}
-	//
-
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
 		for (int idxCh = 0; idxCh < chLen; idxCh++) {
 			// groupChromArr[idxInd][idxCh] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
@@ -92,28 +66,16 @@ void make(gene* g)
   function: Convert the decision variable information in the chromosome corresponding to each individual
 			from binary to decimal and store it in the h array
 */
-void phenotype(gene* g)
+void phenotype()
 {
-	//int i = 0, j = 0;
-	//// initializing the fitness in h-array by assigning 0
-	//for (j = 0; j < num_ind; j++) {
-	//	for (i = 0; i < numDV; i++) {
-	//		h[j][i].fitness = 0;
-	//	}
-	//}
-
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
 		int curIdx_chrom = 0;
 		for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
 			int len_curDv = info_len_dv[idx_dv];
 			int sum_val = 0;
 			for (int idx = curIdx_chrom + len_curDv - 1; idx >= curIdx_chrom; idx--) {
-				sum_val += g[idxInd].ch[idx] * (int)pow(2.0, (double)(len_curDv - (idx - curIdx_chrom) - 1));
+				sum_val += group[idxInd].chrom[idx] * (int)pow(2.0, (double)(len_curDv - (idx - curIdx_chrom) - 1));
 			}
-
-			// 
-			h[idxInd][idx_dv].fitness = sum_val;
-			// 
 			groupDvMapArr[idxInd][idx_dv] = sum_val;
 			curIdx_chrom += len_curDv;
 		}
@@ -122,18 +84,8 @@ void phenotype(gene* g)
 
 void import_para(int idxInd) {
 	for (int idxDV = 0; idxDV < numDV; idxDV++) {
-		//
-		info_val_dv[idxDV] = h[idxInd][idxDV].fitness;
-		//
-
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
-
-	//
-	info_val_dv[1] = h[idxInd][1].fitness * 2 + 1;
-	info_val_dv[3] = h[idxInd][3].fitness * 2 + 1;
-	// 
-
 	info_val_dv[1] = groupDvMapArr[idxInd][1] * 2 + 1;
 	info_val_dv[3] = groupDvMapArr[idxInd][3] * 2 + 1;
 }
@@ -177,11 +129,6 @@ void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numI
 		}
 		sum_f1 += f1_score[idxSet];
 	}
-
-	//
-	h[numInd][0].f_value = sum_f1;
-	//
-
 	group[numInd].f_value = sum_f1;
 
 	if (numGen == num_gen - 1) {
@@ -195,33 +142,14 @@ void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numI
 void fitness(int numGen) // for storing the info of elite individual
 {
 	int i = 0, j = 0;
-	double minFValue = h[0][0].f_value;
-	double maxFValue = h[0][0].f_value;
+	double minFValue = group[0].f_value;
+	double maxFValue = group[0].f_value;
 	double aveFValue = 0.0;
 	double deviation = 0.0;
 	double variance = 0.0;
 	double sumFValue = 0.0;
-	//
-	int maxFValueIndex = 0;
-	//
-
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
-		//
-		sumFValue += h[i][0].f_value;
-		//
-
 		sumFValue += group[idxInd].f_value;
-
-		//
-		if (h[i][0].f_value > maxFValue) {
-			maxFValue = h[i][0].f_value;
-			curMaxFvalIdx = i;
-		}
-		if (h[i][0].f_value < minFValue) {
-			minFValue = h[i][0].f_value;
-		}
-		//
-
 		if (group[idxInd].f_value > maxFValue) {
 			maxFValue = group[idxInd].f_value;
 			curMaxFvalIdx = idxInd;
@@ -230,149 +158,107 @@ void fitness(int numGen) // for storing the info of elite individual
 			minFValue = group[idxInd].f_value;
 		}
 	}
-	// curMaxFvalIdx = maxFValueIndex;
-
-	//
-	// elite[1].f_value = maxFValue;
-	//
-	genInfo[numGen - 1].eliteFValue = maxFValue;
-
-
-	//
-	for (j = 0; j < chLen; j++) {
-		// elite[1].ch[j] = g[maxFValueIndex].ch[j];
-	}
-	//
-
+	genInfo[numGen].eliteFValue = maxFValue;
 	for (int idxCh = 0; idxCh < chLen; idxCh++) {
-		genInfo[numGen - 1].eliteChrom[idxCh] = group[curMaxFvalIdx].chrom[idxCh];
+		genInfo[numGen].eliteChrom[idxCh] = group[curMaxFvalIdx].chrom[idxCh];
 	}
 
 	aveFValue = sumFValue / num_ind;
-	genInfo[numGen - 1].genMinFValue = minFValue;
-	genInfo[numGen - 1].genAveFValue = aveFValue;
+	genInfo[numGen].genMinFValue = minFValue;
+	genInfo[numGen].genAveFValue = aveFValue;
 	for (int idxInd = 0; idxInd < num_ind; idxInd++)
 	{
-		//
-		double diff = h[idxInd][0].f_value - aveFValue;
-		//
 		double diff = group[idxInd].f_value - aveFValue;
-
 		variance += diff * diff;
 	}
 	deviation = sqrt(variance / num_ind);
-	genInfo[numGen - 1].genDevFValue = deviation;
+	genInfo[numGen].genDevFValue = deviation;
 	for (int idxDV = 0; idxDV < numDV; idxDV++) {
-		genInfo[numGen - 1].arr_val_dv[idxDV] = groupDvInfoArr[curMaxFvalIdx][idxDV];
+		genInfo[numGen].arr_val_dv[idxDV] = groupDvInfoArr[curMaxFvalIdx][idxDV];
 	}
 }
 
-int roulette()
-{
-	int i = 0, r = 0;
-	int num = 0;
-	double sum = 0.0;
-	double p[num_ind];
+int roulette() {
+	double sumGroupFValue = 0.0;
+	double sumRandMaxProportion = 0.0;
+	int random = rand();
+	int selInd = 0;
+	double indFValProportion[num_ind];
 
-	for (i = 0; i < num_ind; i++) {
-		sum += h[i][0].f_value;
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
+		sumGroupFValue += group[idxInd].f_value;
 	}
-	for (i = 0; i < num_ind; i++) {
-		p[i] = h[i][0].f_value / sum;
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
+		indFValProportion[idxInd] = group[idxInd].f_value / sumGroupFValue;
 	}
-
-	sum = 0;
-	r = rand();
-	for (i = 0; i < num_ind; i++) {
-		sum += RAND_MAX * p[i];
-		if (r <= sum) {
-			num = i;
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
+		sumRandMaxProportion += RAND_MAX * indFValProportion[idxInd];
+		if (random <= (int)sumRandMaxProportion) {
+			selInd = idxInd;
 			break;
 		}
 	}
-	if (num < 0)	num = roulette();
-	return(num);
+	return selInd;
 }
 
-void crossover(gene* g) {
-	gene g2[num_ind];
-	int num = 0;
-	int n1 = 0;
-	int n2 = 0;
-	int p = 0;
-	int i, j;
-	for (num = 0; num < num_ind; num += 2) {
-		n1 = rand() % 10;
-		n2 = rand() % 10;
+void crossover() {
+	int groupChromArrTmp[num_ind][chLen];
+	int selInd_01, selInd_02;
+	int idxCross;
+	for (int idxInd = 0; idxInd < num_ind; idxInd += 2) {
 		if (rand() <= RAND_MAX * cross) {
-			n1 = roulette();
-			n2 = roulette();
-			p = (int)(rand() * ((chLen - 2) - 1 + 1.0) / (1.0 + RAND_MAX) + 1);
-			for (i = 0; i < p; i++) {
-				g2[num].ch[i] = g[n1].ch[i];
-			}
-			for (i = p; i < chLen; i++) {
-				g2[num].ch[i] = g[n2].ch[i];
-			}
-
-			for (i = 0; i < p; i++) {
-				g2[num + 1].ch[i] = g[n2].ch[i];
-			}
-			for (i = p; i < chLen; i++) {
-				g2[num + 1].ch[i] = g[n1].ch[i];
+			selInd_01 = roulette();
+			selInd_02 = roulette();
+			idxCross = (int)(rand() * ((chLen - 2) - 1 + 1.0) / (1.0 + RAND_MAX) + 1);
+			for (int idxCh = 0; idxCh < chLen; idxCh++) {
+				if (idxCh < idxCross) {
+					groupChromArrTmp[idxInd][idxCh] = group[selInd_01].chrom[idxCh];
+					groupChromArrTmp[idxInd + 1][idxCh] = group[selInd_02].chrom[idxCh];
+				}
+				else {
+					groupChromArrTmp[idxInd][idxCh] = group[selInd_02].chrom[idxCh];
+					groupChromArrTmp[idxInd + 1][idxCh] = group[selInd_01].chrom[idxCh];
+				}
 			}
 		}
 		else {
-			for (i = 0; i < chLen; i++) {
-				n1 = roulette();
-				n2 = roulette();
-				g2[num].ch[i] = g[n1].ch[i];
-				g2[num + 1].ch[i] = g[n2].ch[i];
+			selInd_01 = roulette();
+			selInd_02 = roulette();
+			for (int idxCh = 0; idxCh < chLen; idxCh++) {
+				groupChromArrTmp[idxInd][idxCh] = group[selInd_01].chrom[idxCh];
+				groupChromArrTmp[idxInd + 1][idxCh] = group[selInd_02].chrom[idxCh];
 			}
 		}
 	}
-	for (j = 0; j < num_ind; j++) {
-		for (i = 0; i < chLen; i++) {
-			g[j].ch[i] = g2[j].ch[i];
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
+		for (int idxCh = 0; idxCh < chLen; idxCh++) {
+			group[idxInd].chrom[idxCh] = groupChromArrTmp[idxInd][idxCh];
 		}
 	}
 }
 
-void mutation(gene* g)
-{
-	int num = 0;
-	int r = 0;
-	int i = 0;
-	int p = 0;
-	for (num = 0; num < num_ind; num++) {
+void mutation() {
+	int idxMut;
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
 		if (rand() <= RAND_MAX * mut) {
-			p = (int)(rand() * ((chLen - 1) + 1.0) / (1.0 + RAND_MAX));
-			for (i = 0; i < chLen; i++) {
-				if (i == p) {
-					if (g[num].ch[i] == 0) g[num].ch[i] = 1;
-					else				g[num].ch[i] = 0;
-				}
-			}
-			p = 0;
+			idxMut = (int)(rand() * ((chLen - 1) + 1.0) / (1.0 + RAND_MAX));
+			group[idxInd].chrom[idxMut] = group[idxInd].chrom[idxMut] == 0 ? 1 : 0;
 		}
 	}
 }
 
-void elite_back(gene* g, gene* elite) {
-	int i = 0, j = 0;
-	double ave = 0.0;
-	double min1 = 1.0;
-	int tmp = 0;
-	for (i = 0; i < num_ind; i++) {
-		if (h[i][0].f_value < min1) {
-			min1 = h[i][0].f_value;
-			tmp = i;
+void elite_back(int numGen) {
+	int idxMinFVal = 0;
+	double minFVal = genInfo[numGen].eliteFValue;
+	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
+		if (group[idxInd].f_value < minFVal) {
+			idxMinFVal = idxInd;
+			minFVal = group[idxInd].f_value;
 		}
 	}
-	for (j = 0; j < chLen; j++) {
-		g[tmp].ch[j] = elite[1].ch[j];
+	for (int idxCh = 0; idxCh < chLen; idxCh++) {
+		group[idxMinFVal].chrom[idxCh] = genInfo[numGen].eliteChrom[idxCh];
 	}
-	h[tmp][0].f_value = elite[1].f_value;
 }
 
 /*
@@ -521,23 +407,11 @@ void multiProcess(Mat imgArr[][3]) {
 	}
 
 	srand((unsigned)time(NULL));
-
-	// 
-	gene g[num_ind]; // For storing the group of individuals
-	//
-
-	// 
-	gene elite[10]; // For storing the elite individual of each generation
-	elite[1].f_value = 0.0;
-	// 
-
-	//
-	make(g); // Initializing the info of chrom of 100 individuals
-	//
+	make();
 
 	for (int numGen = 0; numGen < num_gen; numGen++) {
 		cout << "-------generation: " << numGen + 1 << "---------" << endl;
-		phenotype(g);
+		phenotype();
 		for (int numInd = 0; numInd < num_ind; numInd++) {
 			import_para(numInd);
 			for (int i = 0; i < numSets; i++) {
@@ -549,13 +423,11 @@ void multiProcess(Mat imgArr[][3]) {
 			}
 			calculateMetrics(resImg, tarImg, maskImg, numInd, numGen);
 		}
-
-		// fitness(g, elite, numGen);
 		fitness(numGen);
-		crossover(g);
-		mutation(g);
-		elite_back(g, elite);
-		printf("f_value: %.4f\n", elite[1].f_value);
+		crossover();
+		mutation();
+		elite_back(numGen);
+		printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
 	}
 
 	Mat resImg_01;
