@@ -41,7 +41,7 @@
       - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v2```
       - For generating the tarImg of large-spot image (with defect res) - Main
-    - ```BcpFiles -> Files_1225 -> ..._v1```
+    - ```BcpFiles -> Files_1225 -> ..._v2```
       - **Main Process01 - Multipul picture (large spot in GA) **
         - master branch - with perfect res
     - ```BcpFiles -> Files_0210_2025 -> ..._v1```

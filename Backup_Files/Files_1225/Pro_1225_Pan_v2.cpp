@@ -8,7 +8,7 @@ using namespace std;
 using namespace cv;
 
 #define numSets 1 // the num of sets(pairs)
-#define idSet 2 // for mark the selected set if the numSets been set of 1
+#define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 10 // the nums of decision-variables
 #define chLen 36 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
