@@ -7,29 +7,20 @@
 using namespace std;
 using namespace cv;
 
+// the name of decision-variables
+// ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
+// ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
+
 // for Set-01
-int threshVal = 17; // [0, 255] -> dv01 - 8bit
-int gaussianSize = 17; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-int circleOffset = 10; // [0, 15] -> dv03 - 4bit
-int medianSize = 3; // -> dv04 - 4bit
-int dilateTimes_t1 = 0; // -> dv05 - 2bit 
-int aspectOffset_t1 = 1; // [0, 7] -> dv06 - 3bit
-int contourPixNums_t1 = 7; // [0, 7] -> dv07 - 3bit
-int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
-int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
-int contourPixNums_t2 = 5; // [0, 7] -> dv10 - 3bit
+// int info_val_dv[10] = { 17, 13, 10, 5, 1, 0, 6, 1, 0, 4 };
+// int info_val_dv[10] = { 17, 17, 10, 3, 0, 1, 7, 1, 0, 5 };
 
 // for Set-02
-//int threshVal = 17; // [0, 255] -> dv01 - 8bit
-//int gaussianSize = 11; // (n * 2 + 1) 1, 3, 5, 7, 9, ..., 31 -> dv02 - 4bit
-//int circleOffset = 8; // [0, 15] -> dv03 - 4bit
-//int medianSize = 3; // -> dv04 - 4bit
-//int dilateTimes_t1 = 1; // -> dv05 - 2bit 
-//int aspectOffset_t1 = 2; // [0, 7] -> dv06 - 3bit
-//int contourPixNums_t1 = 3; // [0, 7] -> dv07 - 3bit
-//int dilateTimes_t2 = 1; // [0, 3] -> dv08 - 2bit
-//int aspectOffset_t2 = 0; // [0, 7] -> dv09 - 3bit
-//int contourPixNums_t2 = 4; // [0, 7] -> dv10 - 3bit
+// int info_val_dv[10] = { 17, 15, 10, 3, 2, 0, 7, 2, 0, 5 };
+int info_val_dv[10] = { 17, 11, 8, 3, 1, 2, 3, 1, 0, 4 };
+
+// for Com of Set-01 and Set-02
+// int info_val_dv[10] = { 18, 19, 9, 3, 1, 3, 7, 1, 0, 6 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -48,15 +39,16 @@ void gradCal(Mat& srcImg, Mat& dstImg) {
 	normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
 }
 
-vector<Vec3f> circleDetect(Mat img) {
+vector<Vec3f> circleDetect(Mat img, int gaussianSize) {
 	Mat blurred;
+	// GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
 	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
 	vector<Vec3f> circles;
 	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
 	return circles;
 }
 
-int comDistance(int y, int x, Vec3f circle) {
+int comDistance(int y, int x, Vec3f circle, int circleOffset) {
 	int centerX = (int)circle[0];
 	int centerY = (int)circle[1];
 	int radius = (int)circle[2];
@@ -72,7 +64,7 @@ int comDistance(int y, int x, Vec3f circle) {
 	}
 }
 
-void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles) {
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles, int circleOffset) {
 	vector<vector<Point>> contours;
 	findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 	Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
@@ -88,7 +80,7 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 	if (circles.size() != 0) {
 		for (int y = 0; y < resImg.rows; y++) {
 			for (int x = 0; x < resImg.cols; x++) {
-				if (comDistance(y, x, circles[0]) == 2) {
+				if (comDistance(y, x, circles[0], circleOffset) == 2) {
 					if (mask.at<uchar>(y, x) == 255) {
 						resImg.at<uchar>(y, x) = 255;
 					}
@@ -99,10 +91,7 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 	// imgShow("res", resImg);
 }
 
-int main(void) {
-	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
-	//imgShow("res", oriImg);
-
+void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	Mat metaImg;
 
@@ -111,18 +100,18 @@ int main(void) {
 	//imgShow("res", edges_s1);
 
 	Mat biImg;
-	threshold(edges_s1, biImg, threshVal, 255, THRESH_BINARY); // stat-02 -> threshold
+	threshold(edges_s1, biImg, arr_val_dv[0], 255, THRESH_BINARY); // stat-02 -> threshold
 	// imgShow("res", biImg);
 
-	vector<Vec3f> circles = circleDetect(biImg); // GaussianSize
+	vector<Vec3f> circles = circleDetect(biImg, arr_val_dv[1]); // GaussianSize
 
 	if (circles.size() != 0) { // stat-03
 		for (int y = 0; y < biImg.rows; y++) {
 			for (int x = 0; x < biImg.cols; x++) {
-				if (comDistance(y, x, circles[0]) == 0) { // offset
+				if (comDistance(y, x, circles[0], arr_val_dv[2]) == 0) { // offset
 					biImg.at<uchar>(y, x) = 0;
 				}
-				else if (comDistance(y, x, circles[0]) == 1) {
+				else if (comDistance(y, x, circles[0], arr_val_dv[2]) == 1) {
 					biImg.at<uchar>(y, x) = 255;
 				}
 				else {
@@ -134,21 +123,29 @@ int main(void) {
 	//imgShow("test", biImg);
 
 	Mat blurImg_mask;
-	medianBlur(biImg, blurImg_mask, medianSize);
+	medianBlur(biImg, blurImg_mask, arr_val_dv[3]);
 
-	for (int idxET = 0; idxET < dilateTimes_t1; idxET++) {
+	for (int idxET = 0; idxET < arr_val_dv[4]; idxET++) {
 		erode(blurImg_mask, blurImg_mask, kernel);
 	}
 
-	contourProcess(blurImg_mask, biImg, aspectOffset_t1, 100 * contourPixNums_t1, circles);
+	contourProcess(blurImg_mask, biImg, arr_val_dv[5], 100 * arr_val_dv[6], circles, arr_val_dv[2]);
 	// imgShow("res", biImg);
 
 	metaImg = biImg.clone();
-	for (int idxET = 0; idxET < dilateTimes_t2; idxET++) {
+	for (int idxET = 0; idxET < arr_val_dv[7]; idxET++) {
 		erode(metaImg, metaImg, kernel);
 	}
-	contourProcess(metaImg, biImg, aspectOffset_t2, 100 * contourPixNums_t2, circles);
-	imgShow("res", biImg);
+	contourProcess(metaImg, biImg, arr_val_dv[8], 100 * arr_val_dv[9], circles, arr_val_dv[2]);
+	// imgShow("res", biImg);
+	resImg = biImg.clone();
+}
+
+int main(void) {
+	Mat oriImg = imread("./imgs_1225_v1/input/testImg/testImg_01.png", IMREAD_GRAYSCALE);
+	Mat resImg;
+	imgSingleProcess(oriImg, resImg, info_val_dv);
+	imgShow("res", resImg);
 
 	return 0;
 }

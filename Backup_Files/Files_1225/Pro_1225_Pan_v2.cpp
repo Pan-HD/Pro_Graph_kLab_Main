@@ -37,7 +37,9 @@ genInfoType genInfo[num_gen];
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
-// the allocated nums of bit of the decision-variables
+// the name of decision-variables
+// ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
+// ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
 int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
 int groupDvMapArr[num_ind][numDV];
 int info_val_dv[numDV];

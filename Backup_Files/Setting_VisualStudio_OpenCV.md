@@ -1,4 +1,4 @@
-### temp_01
+### Setting - VisualStudio - OpenCV
 
 ---
 
@@ -31,7 +31,5 @@
       opencv_world490.lib
       ```
 
-- 
-
-- 
+  
 
