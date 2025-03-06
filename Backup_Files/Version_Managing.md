@@ -44,6 +44,9 @@
     - ```BcpFiles -> Files_1225 -> ..._v2```
       - **Main Process01 - Multipul picture (large spot in GA) **
         - master branch - with perfect res
+    - ```BcpFiles -> Files_1225 -> ..._v3```
+      - **test branch of 1225-v2**
+        - modified the eliteBack func in GA part, with double time costing
     - ```BcpFiles -> Files_0210_2025 -> ..._v1```
       - Main Process01 - Multipul picture (large spot in GA) 
         - master branch - with defect res
