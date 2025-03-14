@@ -60,6 +60,8 @@
     - ```BcpFiles -> Files_0131_2025 -> ..._v1```
       - **For generating the tarImg of large-spot image (with perfect res)**
         - finished
+    - ```BcpFiles -> Files_0314_2025 -> ..._v1```
+      - For testing the system of large spot detect
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
