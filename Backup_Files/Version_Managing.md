@@ -47,6 +47,9 @@
     - ```BcpFiles -> Files_1225 -> ..._v3```
       - **test branch of 1225-v2**
         - modified the eliteBack func in GA part, with double time costing
+    - ```BcpFiles -> Files_0318_2025 -> ..._v1```
+      - **test branch of 1225-v3**
+        - Processing with 4 Sets (2 Sets been adding)
     - ```BcpFiles -> Files_0210_2025 -> ..._v1```
       - Main Process01 - Multipul picture (large spot in GA) 
         - master branch - with defect res
