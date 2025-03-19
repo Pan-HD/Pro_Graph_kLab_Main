@@ -6,7 +6,7 @@ void createImageWithCircle(int width, int height, int radius) {
     cv::circle(image, center, radius, cv::Scalar(255, 255, 255), -1);
     cv::imshow("Image with Circle", image);
     cv::waitKey(0);
-    cv::imwrite("./imgs_1225_v1/input/maskImg_108.png", image);
+    // cv::imwrite("./imgs_1225_v1/input/maskImg_108.png", image);
 }
 
 int main() {
