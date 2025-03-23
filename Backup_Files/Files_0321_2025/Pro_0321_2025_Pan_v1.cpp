@@ -8,14 +8,14 @@ using namespace std;
 using namespace cv;
 
 // the declaration of 8 decision variables (with the sum-fVal of 3.5645)
-int fsize = 51;
+int fsize = 27;
 int binary = 63;
 int linear = 5;
-int filterswitch_flag = 0;
+int filterswitch_flag = 1;
 int erodedilate_times = 5;
 int erodedilate_sequence = 1;
-int abusolute_flag = 1;
-int pixellabelingmethod = 0;
+int abusolute_flag = 0;
+int pixellabelingmethod = 1;
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -23,31 +23,26 @@ void imgShow(const string& name, const Mat& img) {
 	destroyAllWindows();
 }
 
-void sabun(Mat &input1, Mat &input2, Mat &resImg) {
-	int i, j;
-	Mat output;
-	output = cv::Mat::zeros(cv::Size(input2.cols, input2.rows), CV_8UC3);//8UC3は3チャンネルに変えるタイプだ
-	cvtColor(output, output, COLOR_RGB2GRAY);//グレースケール
-
-	for (j = 0; j < input1.rows; j++)
+void differenceProcess(Mat postImg, Mat preImg, Mat &resImg) {
+	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
+	for (int j = 0; j < postImg.rows; j++)
 	{
-		for (i = 0; i < input1.cols; i++) {
-			output.at<unsigned char>(j, i) = input2.at<unsigned char>(j, i) - input1.at<unsigned char>(j, i);
-			if (input2.at<unsigned char>(j, i) - input1.at<unsigned char>(j, i) < 0)
-			{
-				if (abusolute_flag == 0) {
-					output.at<unsigned char>(j, i) = abs(output.at<unsigned char>(j, i));
+		for (int i = 0; i < postImg.cols; i++) {
+			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
+			if (diffVal < 0) {
+				if (abusolute_flag != 0) {
+					diffVal = abs(diffVal);
 				}
 				else {
-					output.at<unsigned char>(j, i) = 0;
+					diffVal = 0;
 				}
 			}
+			resImg.at<uchar>(j, i) = diffVal;
 		}
 	}
-	resImg = output.clone();
 }
 
-Mat labeling(Mat img, int connectivity) {
+void labeling(Mat img, Mat &resImg, int connectivity) {
 	Mat img_con;
 	Mat stats, centroids;
 
@@ -85,7 +80,7 @@ Mat labeling(Mat img, int connectivity) {
 		}
 	}
 
-	// CV_8UC3丗3 channels
+	// CV_8UC3: 3 channels
 	Mat img_color = Mat::zeros(img_con.size(), CV_8UC3);
 	for (j = 0; j < img_con.rows; j++) {
 		for (i = 0; i < img_con.cols; i++)
@@ -95,10 +90,22 @@ Mat labeling(Mat img, int connectivity) {
 			img_color.at<Vec3b>(j, i) = colors[label];
 		}
 	}
-	return img_color;
+	cvtColor(img_color, img_color, COLOR_RGB2GRAY);
+	resImg = img_color.clone();
 }
 
-Mat Morphology(Mat img, int isDilFirst) {
+vector<Vec3f> circleDetect(Mat img, int gaussianSize) {
+	Mat blurred;
+	// GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
+	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
+	// imgShow("res", blurred);
+
+	vector<Vec3f> circles;
+	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
+	return circles;
+}
+
+void Morphology(Mat img, Mat &resImg, int isDilFirst) {
 	Mat dst;
 	dst.create(img.size(), img.type());
 	if (isDilFirst) {
@@ -109,42 +116,58 @@ Mat Morphology(Mat img, int isDilFirst) {
 		erode(img, dst, Mat());
 		dilate(dst, dst, Mat());
 	}
-	return dst;
+	resImg = dst.clone();
 }
 
 int main(void) {
-	Mat oriImg = imread("./imgs_1209_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_0321_2025_v1/input/oriImg_02.png", IMREAD_GRAYSCALE);
+
 	// imgShow("ori", oriImg);
 
 	Mat blurImg;
-	Mat sabunImg;
+	Mat diffImg;
 	Mat biImg;
 	Mat labelImg;
 
 	// bluring
 	if (filterswitch_flag) {
-		medianBlur(oriImg, blurImg, fsize);
+		medianBlur(oriImg, blurImg, fsize); // marked
 	}
 	else {
 		blur(oriImg, blurImg, Size(fsize, fsize));
 	}
-	imgShow("res", blurImg);
+	// imgShow("res", blurImg);
 
-	sabun(oriImg, blurImg, sabunImg);
-	// imgShow("res", sabunImg);
+	differenceProcess(blurImg, oriImg, diffImg);
+	// imgShow("res", diffImg);
 
-	threshold(blurImg, biImg, binary, 255, THRESH_BINARY);
+	threshold(diffImg, biImg, binary, 255, THRESH_BINARY);
 	// imgShow("res", biImg);
 
 	if (!pixellabelingmethod)
 	{
-		// biImg with 1-channel has been changed to 3-channel
-		labelImg = labeling(biImg, 4);
+		labeling(biImg, labelImg, 4);
 	}
 	else
 	{
-		labelImg = labeling(biImg, 8);
+		labeling(biImg, labelImg, 8);
 	}
+	// imgShow("res", labelImg);
+
+	bitwise_not(labelImg, labelImg);
+	// imgShow("res", labelImg);
+
+	vector<Vec3f> circles = circleDetect(oriImg, 11); // GaussianSize
+	if (circles.size() != 0) { // (int)circles[0][2]
+		for (int y = 0; y < oriImg.rows; y++) {
+			for (int x = 0; x < oriImg.cols; x++) {
+				int distance = (int)sqrt(pow((double)(x - (int)circles[0][0]), 2) + pow((double)(y - (int)circles[0][1]), 2));
+				if (distance > (int)circles[0][2])
+					labelImg.at<uchar>(y, x) = 0;
+			}
+		}
+	}
+	// imgShow("res", labelImg);
 
 	// Morphology
 	if (!erodedilate_sequence)
@@ -152,7 +175,7 @@ int main(void) {
 		if (erodedilate_times != 0) {
 			for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
 			{
-				labelImg = Morphology(labelImg, 1);
+				Morphology(labelImg, labelImg, 1);
 			}
 		}
 	}
@@ -161,13 +184,11 @@ int main(void) {
 		if (erodedilate_times != 0) {
 			for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
 			{
-				labelImg = Morphology(labelImg, 0);
+				Morphology(labelImg, labelImg, 0);
 			}
 		}
 	}
-
 	// imgShow("res", labelImg);
-	// imwrite("./imgs_Ver.1.1/resImg_04.png", labelImg);
 
 	return 0;
 }

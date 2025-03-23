@@ -163,31 +163,26 @@ void import_para(int ko) {
 	pixellabelingmethod = h[ko][7].fitness;
 }
 
-void sabun(Mat &input1, Mat &input2, Mat &resImg) {
-	int i, j;
-	Mat output;
-	output = cv::Mat::zeros(cv::Size(input2.cols, input2.rows), CV_8UC3);//8UC3は3チャンネルに変えるタイプだ
-	cvtColor(output, output, COLOR_RGB2GRAY);//グレースケール
-
-	for (j = 0; j < input1.rows; j++)
+void differenceProcess(Mat postImg, Mat preImg, Mat &resImg) {
+	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
+	for (int j = 0; j < postImg.rows; j++)
 	{
-		for (i = 0; i < input1.cols; i++) {
-			output.at<unsigned char>(j, i) = input2.at<unsigned char>(j, i) - input1.at<unsigned char>(j, i);
-			if (input2.at<unsigned char>(j, i) - input1.at<unsigned char>(j, i) < 0)
-			{
-				if (abusolute_flag == 0) {
-					output.at<unsigned char>(j, i) = abs(output.at<unsigned char>(j, i));
+		for (int i = 0; i < postImg.cols; i++) {
+			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
+			if (diffVal < 0) {
+				if (abusolute_flag != 0) {
+					diffVal = abs(diffVal);
 				}
 				else {
-					output.at<unsigned char>(j, i) = 0;
+					diffVal = 0;
 				}
 			}
+			resImg.at<uchar>(j, i) = diffVal;
 		}
 	}
-	resImg = output.clone();
 }
 
-Mat labeling(Mat img, int connectivity) {
+void labeling(Mat img, Mat &resImg, int connectivity) {
 	Mat img_con;
 	Mat stats, centroids;
 
@@ -225,7 +220,7 @@ Mat labeling(Mat img, int connectivity) {
 		}
 	}
 
-	// CV_8UC3丗3 channels
+	// CV_8UC3: 3 channels
 	Mat img_color = Mat::zeros(img_con.size(), CV_8UC3);
 	for (j = 0; j < img_con.rows; j++) {
 		for (i = 0; i < img_con.cols; i++)
@@ -235,10 +230,20 @@ Mat labeling(Mat img, int connectivity) {
 			img_color.at<Vec3b>(j, i) = colors[label];
 		}
 	}
-	return img_color;
+	cvtColor(img_color, img_color, COLOR_RGB2GRAY);
+	resImg = img_color.clone();
 }
 
-Mat Morphology(Mat img, int isDilFirst) {
+vector<Vec3f> circleDetect(Mat img, int gaussianSize) {
+	Mat blurred;
+	// GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
+	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
+	vector<Vec3f> circles;
+	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
+	return circles;
+}
+
+void Morphology(Mat img, Mat &resImg, int isDilFirst) {
 	Mat dst;
 	dst.create(img.size(), img.type());
 	if (isDilFirst) {
@@ -249,7 +254,7 @@ Mat Morphology(Mat img, int isDilFirst) {
 		erode(img, dst, Mat());
 		dilate(dst, dst, Mat());
 	}
-	return dst;
+	resImg = dst.clone();
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -257,16 +262,7 @@ double calculateF1Score(double precision, double recall) {
 	return 2.0 * (precision * recall) / (precision + recall);
 }
 
-void calculateMetrics(Mat metaImg[], Mat tarImg[], Mat maskImg[], int numInd, int numGen) {
-	Mat metaImg_g[numSets];
-	Mat tarImg_g[numSets];
-	Mat maskImg_g[numSets];
-	for (int i = 0; i < numSets; i++) {
-		cvtColor(metaImg[i], metaImg_g[i], cv::COLOR_BGR2GRAY);
-		cvtColor(tarImg[i], tarImg_g[i], cv::COLOR_BGR2GRAY);
-		cvtColor(maskImg[i], maskImg_g[i], cv::COLOR_BGR2GRAY);
-	}
-
+void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numInd, int numGen) {
 	double f1_score[numSets];
 
 	for (int k = 0; k < numSets; k++) { // k: the index of the set being processed
@@ -454,7 +450,6 @@ void elite_back(gene* g, gene* elite) {
 
 void multiProcess(Mat imgArr[][3]) {
 	Mat blurImg[numSets]; //
-	Mat sabunImg[numSets];//
 	Mat diffImg[numSets]; // 
 	Mat biImg[numSets]; // 
 	Mat labelImg[numSets];
@@ -464,7 +459,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_1209_v1/output/f_value.txt", "a");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0321_2025_v2/output/f_value.txt", "a");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -472,14 +467,14 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the decision varibles
 	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_1209_v1/output/params.txt", "a");
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0321_2025_v2/output/params.txt", "a");
 	if (err1 != 0 || fl_params == nullptr) {
 		perror("Cannot open the file");
 		return;
 	}
 
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_1209_v1/output/maxFvalInfo_final.txt", "a");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0321_2025_v2/output/maxFvalInfo_final.txt", "a");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -504,17 +499,28 @@ void multiProcess(Mat imgArr[][3]) {
 				else {
 					blur(imgArr[i][0], blurImg[i], Size(fsize, fsize));
 				}
-				sabun(imgArr[i][0], blurImg[i], sabunImg[i]);
+				differenceProcess(blurImg[i], imgArr[i][0], diffImg[i]);
+				threshold(diffImg[i], biImg[i], binary, 255, THRESH_BINARY);
 
-				threshold(sabunImg[i], biImg[i], binary, 255, THRESH_BINARY);
 				if (!pixellabelingmethod)
 				{
-					// biImg with 1-channel has been changed to 3-channel
-					labelImg[i] = labeling(biImg[i], 4);
+					labeling(biImg[i], labelImg[i], 4);
 				}
 				else
 				{
-					labelImg[i] = labeling(biImg[i], 8);
+					labeling(biImg[i], labelImg[i], 8);
+				}
+
+				bitwise_not(labelImg[i], labelImg[i]);
+				vector<Vec3f> circles = circleDetect(imgArr[i][0], 11); // GaussianSize
+				if (circles.size() != 0) { // (int)circles[0][2]
+					for (int y = 0; y < imgArr[i][0].rows; y++) {
+						for (int x = 0; x < imgArr[i][0].cols; x++) {
+							int distance = (int)sqrt(pow((double)(x - (int)circles[0][0]), 2) + pow((double)(y - (int)circles[0][1]), 2));
+							if (distance > (int)circles[0][2])
+								labelImg[i].at<uchar>(y, x) = 0;
+						}
+					}
 				}
 
 				// Morphology
@@ -523,7 +529,7 @@ void multiProcess(Mat imgArr[][3]) {
 					if (erodedilate_times != 0) {
 						for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
 						{
-							labelImg[i] = Morphology(labelImg[i], 1);
+							Morphology(labelImg[i], labelImg[i], 1);
 						}
 					}
 				}
@@ -532,7 +538,7 @@ void multiProcess(Mat imgArr[][3]) {
 					if (erodedilate_times != 0) {
 						for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
 						{
-							labelImg[i] = Morphology(labelImg[i], 0);
+							Morphology(labelImg[i], labelImg[i], 0);
 						}
 					}
 				}
@@ -553,7 +559,7 @@ void multiProcess(Mat imgArr[][3]) {
 		printf("f_value: %.4f, binary: %d\n", elite[1].f_value, binary);
 		if (numGen % 10 == 0) {
 			for (int i = 0; i < numSets; i++) {
-				sprintf_s(imgName_pro[i], "./imgs_1209_v1/output/img_0%d/Gen-%d.png", i + 1, numGen);
+				sprintf_s(imgName_pro[i], "./imgs_0321_2025_v2/output/img_0%d/Gen-%d.png", i + 1, numGen);
 				imwrite(imgName_pro[i], labelImg[i]);
 			}
 		}
@@ -562,7 +568,7 @@ void multiProcess(Mat imgArr[][3]) {
 		vector<Mat> images = { labelImg[i], imgArr[i][1], imgArr[i][2] };
 		Mat res;
 		hconcat(images, res);
-		sprintf_s(imgName_final[i], "./imgs_1209_v1/output/img_0%d/imgs_final.png", i + 1);
+		sprintf_s(imgName_final[i], "./imgs_0321_2025_v2/output/img_0%d/imgs_final.png", i + 1);
 		imwrite(imgName_final[i], res);
 	}
 
@@ -587,19 +593,19 @@ int main(void) {
 	char inputPathName_mask[256];
 
 	for (int i = 0; i < numSets; i++) {
-		sprintf_s(inputPathName_ori, "./imgs_1209_v1/input/oriImg_0%d.png", i + 1);
-		sprintf_s(inputPathName_tar, "./imgs_1209_v1/input/tarImg_0%d.png", i + 1);
-		sprintf_s(inputPathName_mask, "./imgs_1209_v1/input/maskImg_general.png");
+		sprintf_s(inputPathName_ori, "./imgs_0321_2025_v2/input/oriImg_0%d.png", i + 1);
+		sprintf_s(inputPathName_tar, "./imgs_0321_2025_v2/input/tarImg_0%d.png", i + 1);
+		sprintf_s(inputPathName_mask, "./imgs_0321_2025_v2/input/maskImg_general.png");
 
 		for (int j = 0; j < 3; j++) {
 			if (j == 0) {
 				imgArr[i][j] = imread(inputPathName_ori, 0);
 			}
 			else if (j == 1) {
-				imgArr[i][j] = imread(inputPathName_tar);
+				imgArr[i][j] = imread(inputPathName_tar, 0);
 			}
 			else {
-				imgArr[i][j] = imread(inputPathName_mask);
+				imgArr[i][j] = imread(inputPathName_mask, 0);
 			}
 		}
 	}

@@ -65,6 +65,9 @@
         - finished
     - ```BcpFiles -> Files_0314_2025 -> ..._v1```
       - For testing the system of large spot detect
+  - Rollback program of spot (汚れ・マジック)
+    - ```BcpFiles -> Files_0321_2025 -> ..._v1```
+    - ```BcpFiles -> Files_0321_2025 -> ..._v2```
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
