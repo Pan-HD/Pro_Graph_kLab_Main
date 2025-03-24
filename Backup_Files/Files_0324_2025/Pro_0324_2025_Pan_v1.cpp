@@ -9,8 +9,10 @@ using namespace cv;
 
 #define numSets 2 // the num of sets(pairs)
 #define idSet 2 // for mark the selected set if the numSets been set of 1
-#define numDV 10 // the nums of decision-variables
-#define chLen 36 // the length of chromosome
+#define blockNums 9 // the nums of block
+#define blockBitNums 4 // the nums of bit of a block
+#define numDV 16 // the nums of decision-variables
+#define chLen 94 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -57,12 +59,17 @@ genInfoType genInfo[num_gen];
 int curMaxFvalIdx = 0;
 
 // the name of decision-variables
+// ["fsize", "binary", "linear", "filterSwitchFlag", "absoluteFlag", "pixelLabelingMethod"]
 // ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
 // ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
-int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
+int info_len_dv[numDV] = { 6, 8, 5, 1, 1, 1, 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
 int groupDvMapArr[num_ind][numDV];
 int info_val_dv[numDV];
 int groupDvInfoArr[num_ind][numDV];
+
+int info_val_order[blockNums];
+int groupOrderMapArr[num_ind][blockNums];
+int groupOrderInfoArr[num_ind][blockNums];
 
 // for storing the f-value of every individual in the group
 double indFvalInfo[num_ind][numSets + 1];
@@ -74,9 +81,9 @@ int main(void) {
 	char inputPathName_mask[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_1225_v3/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_1225_v3/input/tarImg_0%d.png", idSet);
-		sprintf_s(inputPathName_mask, "./imgs_1225_v3/input/maskImg_general.png");
+		sprintf_s(inputPathName_ori, "./imgs_0324_2025_v1/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_0324_2025_v1/input/tarImg_0%d.png", idSet);
+		sprintf_s(inputPathName_mask, "./imgs_0324_2025_v1/input/maskImg_general.png");
 		for (int j = 0; j < 3; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -91,9 +98,9 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_1225_v3/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_1225_v3/input/tarImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_mask, "./imgs_1225_v3/input/maskImg_general.png");
+			sprintf_s(inputPathName_ori, "./imgs_0324_2025_v1/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_0324_2025_v1/input/tarImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_mask, "./imgs_0324_2025_v1/input/maskImg_general.png");
 
 			for (int j = 0; j < 3; j++) {
 				if (j == 0) {
@@ -132,10 +139,22 @@ void make()
   function: Convert the decision variable information in the chromosome corresponding to each individual
 			from binary to decimal and store it in the h array
 */
-void phenotype()
+void phenotype() // Marked on 0324
 {
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
+		// for mapping the part of order
 		int curIdx_chrom = 0;
+		for (int idx_order = 0; idx_order < blockNums; idx_order++) {
+			int sum_val = 0;
+			for (int idx = curIdx_chrom + blockBitNums - 1; idx >= curIdx_chrom; idx--) {
+				sum_val += group[idxInd].chrom[idx] * (int)pow(2.0, (double)(blockBitNums - (idx - curIdx_chrom) - 1));
+			}
+			groupOrderMapArr[idxInd][idx_order] = sum_val;
+			curIdx_chrom += blockBitNums;
+		}
+
+		// for mapping the part of decision-varibles
+		curIdx_chrom = 36;
 		for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
 			int len_curDv = info_len_dv[idx_dv];
 			int sum_val = 0;
@@ -477,7 +496,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of every generation (max, min, ave, dev)
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_1225_v3/output/f_value.txt", "a");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0324_2025_v1/output/f_value.txt", "a");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -485,7 +504,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the decision varibles
 	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_1225_v3/output/params.txt", "a");
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0324_2025_v1/output/params.txt", "a");
 	if (err1 != 0 || fl_params == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -493,7 +512,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_1225_v3/output/maxFvalInfo_final.txt", "a");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0324_2025_v1/output/maxFvalInfo_final.txt", "a");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -524,24 +543,24 @@ void multiProcess(Mat imgArr[][3]) {
 		if ((idxGen + 1) % 10 == 0) {
 			if (numSets == 1) {
 				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_1225_v3/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+				sprintf_s(imgName_pro[0], "./imgs_0324_2025_v1/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
 				imwrite(imgName_pro[0], resImg_01);
 				if (idxGen == num_gen - 1) {
 					vector<Mat> images = { resImg_01, imgArr[0][1], imgArr[0][2] };
 					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_1225_v3/output/img_0%d/imgs_final.png", idSet);
+					sprintf_s(imgName_final[0], "./imgs_0324_2025_v1/output/img_0%d/imgs_final.png", idSet);
 					imwrite(imgName_final[0], res);
 				}
 			}
 			else {
 				for (int idxSet = 0; idxSet < numSets; idxSet++) {
 					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_1225_v3/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+					sprintf_s(imgName_pro[idxSet], "./imgs_0324_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
 					imwrite(imgName_pro[idxSet], resImg_02);
 					if (idxGen == num_gen - 1) {
 						vector<Mat> images = { resImg_02, imgArr[idxSet][1], imgArr[idxSet][2] };
 						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_1225_v3/output/img_0%d/imgs_final.png", idxSet + 1);
+						sprintf_s(imgName_final[idxSet], "./imgs_0324_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
 						imwrite(imgName_final[idxSet], res);
 					}
 				}
