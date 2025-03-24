@@ -68,6 +68,8 @@
   - Rollback program of spot (汚れ・マジック)
     - ```BcpFiles -> Files_0321_2025 -> ..._v1```
     - ```BcpFiles -> Files_0321_2025 -> ..._v2```
+  - Comprehensive Version of GA
+    - ```BcpFiles -> Files_0324_2025 -> ..._v1```
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
