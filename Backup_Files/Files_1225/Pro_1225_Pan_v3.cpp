@@ -12,7 +12,7 @@ using namespace cv;
 #define numDV 10 // the nums of decision-variables
 #define chLen 36 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
-#define num_gen 100 // the nums of generation of the GA algorithm
+#define num_gen 30 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
 #define mut 0.05 // the rate of mutation
 
@@ -205,7 +205,7 @@ void calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], Mat maskImg_g[], int numI
 	}
 
 	// flagEB: the flag of elite-back (func been called in the elite-back)
-	if (!flagEB) {
+	if (flagEB) {
 		for (int idxDV = 0; idxDV < numDV; idxDV++) {
 			groupDvInfoArr[numInd][idxDV] = info_val_dv[idxDV];
 		}

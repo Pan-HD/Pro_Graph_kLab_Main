@@ -70,6 +70,13 @@
     - ```BcpFiles -> Files_0321_2025 -> ..._v2```
   - Comprehensive Version of GA
     - ```BcpFiles -> Files_0324_2025 -> ..._v1```
+      - **Master Branch**
+    - ```BcpFiles -> Files_0325_2025 -> ..._v1```
+      - Testing Branch - 01
+        - ```Single Process of tippinngu-detect, thresh -> bitWise -> ...```
+    - ```BcpFiles -> Files_0325_2025 -> ..._v2```
+      - Testing Branch - 02
+        - ```Single Process of tippinngu-detect, thresh -> ... -> bitWise```
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02

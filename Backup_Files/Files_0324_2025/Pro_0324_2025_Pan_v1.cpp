@@ -135,11 +135,8 @@ void make()
 	}
 }
 
-/*
-  function: Convert the decision variable information in the chromosome corresponding to each individual
-			from binary to decimal and store it in the h array
-*/
-void phenotype() // Marked on 0324
+// for mapping the order-part and dv-part to mapArr from Chroms
+void phenotype()
 {
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) { // the loop of inds
 		// for mapping the part of order
@@ -154,7 +151,7 @@ void phenotype() // Marked on 0324
 		}
 
 		// for mapping the part of decision-varibles
-		curIdx_chrom = 36;
+		// curIdx_chrom = 36;
 		for (int idx_dv = 0; idx_dv < numDV; idx_dv++) {
 			int len_curDv = info_len_dv[idx_dv];
 			int sum_val = 0;
@@ -168,6 +165,11 @@ void phenotype() // Marked on 0324
 }
 
 void import_para(int idxInd) {
+	for (int idxOrder = 0; idxOrder < blockNums; idxOrder++) {
+		info_val_order[idxOrder] = groupOrderMapArr[idxInd][idxOrder];
+	}
+	// Removing the dup-val in info_val_order[idxOrder], Waiting
+
 	for (int idxDV = 0; idxDV < numDV; idxDV++) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
@@ -419,6 +421,19 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 		}
 	}
 	// imgShow("res", resImg);
+}
+
+void block_01(Mat& metaImg, Mat& resImg, int filterSwitchFlag, int fsize) {
+	// blur process
+	Mat blurImg;
+	if (filterSwitchFlag) {
+		medianBlur(metaImg, blurImg, fsize);
+	}
+	else {
+		blur(metaImg, blurImg, Size(fsize, fsize));
+	}
+	// differenceProcess, marked...
+
 }
 
 void processOnGenLoop(Mat imgArr[][3], Mat resImg[], Mat tarImg[], Mat maskImg[], int numGen, int flagEB) {
