@@ -97,3 +97,5 @@
         - 04
     - ```BcpFiles -> Files_0122_2025 -> ..._v1```
       - Document of DecisionTree of bad res (```×12000```) 
+  - Spot - GP
+    - ```BcpFiles -> Files_0326_2025 -> ..._v1```
