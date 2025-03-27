@@ -7,14 +7,13 @@
 using namespace std;
 using namespace cv;
 
-// the declaration of 8 decision variables (with the sum-fVal of 3.5645)
 int filterSwitchFlag = 1;
 int fsize = 17; // spot: 27, tippinngu: 17
 int absoluteFlag = 0;
-int threshVal = 7; // spot: 63, tippinngu: 7
+int threshVal = 10; // spot: 63, tippinngu: 7
 int dilateTimes = 3;
 int aspectOffset = 0;
-int contourPixNums = 7;
+int contourPixNums = 2; // spot: 1, tippinngu: 7 (4 bits)
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -64,7 +63,7 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums) {
 }
 
 int main(void) {
-	Mat oriImg = imread("./imgs_0321_2025_v1/input/oriImg_06.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_0327_2025_v1/input/oriImg_08.png", IMREAD_GRAYSCALE);
 
 	// imgShow("ori", oriImg);
 
@@ -102,6 +101,7 @@ int main(void) {
 
 	contourProcess(maskImg, biImg, aspectOffset, 100 * contourPixNums);
 	imgShow("res", biImg);
+	// imwrite("./imgs_0327_2025_v1/input/tarImg_08.png", biImg);
 
 	return 0;
 }

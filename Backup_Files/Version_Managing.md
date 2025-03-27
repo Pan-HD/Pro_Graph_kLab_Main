@@ -4,6 +4,7 @@
 
 - Main Workspace
   - 
+  
 - Pan
   - Spot - Main Process - Single picture
     - ```BcpFiles -> Files_1031 -> ..._v1```
@@ -14,6 +15,7 @@
     - the process of generating the mask image with a specified radius
       - ```BcpFiles -> Files_1104 -> ..._v1```
         - 06
+    
   - Spot - Main Process - Multipul picture
     - ```BcpFiles -> Files_1107 -> ..._v1```
       - for generating tarImg - 07
@@ -65,28 +67,37 @@
         - finished
     - ```BcpFiles -> Files_0314_2025 -> ..._v1```
       - For testing the system of large spot detect
+    
   - Rollback program of spot (汚れ・マジック)
     - ```BcpFiles -> Files_0321_2025 -> ..._v1```
     - ```BcpFiles -> Files_0321_2025 -> ..._v2```
+    
   - **Comprehensive Version of Single Process**
     - ```BcpFiles -> Files_0325_2025 -> ..._v3```
       - **Testing Version**
-  - Comprehensive Version of GA
-    - ```BcpFiles -> Files_0324_2025 -> ..._v1```
+    
+  - **Comprehensive Version of GA**
+    
+    - ```BcpFiles -> Files_0327_2025 -> ..._v1```
       - **Master Branch**
+    
+    - ```BcpFiles -> Files_0324_2025 -> ..._v1```
     - ```BcpFiles -> Files_0325_2025 -> ..._v1```
       - Testing Branch - 01
         - ```Single Process of tippinngu-detect, thresh -> bitWise -> ...```
     - ```BcpFiles -> Files_0325_2025 -> ..._v2```
       - Testing Branch - 02
         - ```Single Process of tippinngu-detect, thresh -> ... -> bitWise```
+    
   - Fold
     - ```BcpFiles -> Files_1023 -> ..._v2```
       - 02
+    
   - ELSE
     - The process of text ( 「，」「．」 ) ing
       - ```BcpFiles -> Files_1110 -> ..._v1```
         - 09 
+  
 - LY
   - Spot
     - ```BcpFiles -> Files_1024 -> ..._v1```
