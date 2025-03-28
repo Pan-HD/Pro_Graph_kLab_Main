@@ -4,7 +4,6 @@
 
 - Main Workspace
   - 
-  
 - Pan
   - Spot - Main Process - Single picture
     - ```BcpFiles -> Files_1031 -> ..._v1```
@@ -97,7 +96,6 @@
     - The process of text ( 「，」「．」 ) ing
       - ```BcpFiles -> Files_1110 -> ..._v1```
         - 09 
-  
 - LY
   - Spot
     - ```BcpFiles -> Files_1024 -> ..._v1```
@@ -110,3 +108,5 @@
       - Document of DecisionTree of bad res (```×12000```) 
   - Spot - GP
     - ```BcpFiles -> Files_0326_2025 -> ..._v1```
+    - ```BcpFiles -> Files_0326_2025 -> ..._v2```
+      - Testing
