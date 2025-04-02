@@ -71,9 +71,8 @@ int main(void) {
 	// char inputPathName_mask[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_0327_2025_v1/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_0327_2025_v1/input/tarImg_0%d.png", idSet);
-		// sprintf_s(inputPathName_mask, "./imgs_0327_2025_v1/input/maskImg_general.png");
+		sprintf_s(inputPathName_ori, "./imgs_0331_2025_v1/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_0331_2025_v1/input/tarImg_0%d.png", idSet);
 		for (int j = 0; j < 2; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -85,10 +84,8 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_0327_2025_v1/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_0327_2025_v1/input/tarImg_0%d.png", i + 1);
-			// sprintf_s(inputPathName_mask, "./imgs_0327_2025_v1/input/maskImg_general.png");
-
+			sprintf_s(inputPathName_ori, "./imgs_0331_2025_v1/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_0331_2025_v1/input/tarImg_0%d.png", i + 1);
 			for (int j = 0; j < 2; j++) {
 				if (j == 0) {
 					imgArr[i][j] = imread(inputPathName_ori, 0);
@@ -413,7 +410,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of every generation (max, min, ave, dev)
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_0327_2025_v1/output/f_value.txt", "a");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0331_2025_v1/output/f_value.txt", "a");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -421,7 +418,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the decision varibles
 	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_0327_2025_v1/output/params.txt", "a");
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0331_2025_v1/output/params.txt", "a");
 	if (err1 != 0 || fl_params == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -429,7 +426,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0327_2025_v1/output/maxFvalInfo_final.txt", "a");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0331_2025_v1/output/maxFvalInfo_final.txt", "a");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -460,24 +457,24 @@ void multiProcess(Mat imgArr[][3]) {
 		if ((idxGen + 1) % 10 == 0) {
 			if (numSets == 1) {
 				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_0327_2025_v1/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+				sprintf_s(imgName_pro[0], "./imgs_0331_2025_v1/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
 				imwrite(imgName_pro[0], resImg_01);
 				if (idxGen == num_gen - 1) {
 					vector<Mat> images = { resImg_01, imgArr[0][1] };
 					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_0327_2025_v1/output/img_0%d/imgs_final.png", idSet);
+					sprintf_s(imgName_final[0], "./imgs_0331_2025_v1/output/img_0%d/imgs_final.png", idSet);
 					imwrite(imgName_final[0], res);
 				}
 			}
 			else {
 				for (int idxSet = 0; idxSet < numSets; idxSet++) {
 					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0327_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+					sprintf_s(imgName_pro[idxSet], "./imgs_0331_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
 					imwrite(imgName_pro[idxSet], resImg_02);
 					if (idxGen == num_gen - 1) {
 						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
 						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0327_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
+						sprintf_s(imgName_final[idxSet], "./imgs_0331_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
 						imwrite(imgName_final[idxSet], res);
 					}
 				}
