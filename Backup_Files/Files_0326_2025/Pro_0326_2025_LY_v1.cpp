@@ -5,6 +5,10 @@
 #include <cstdlib>
 
 #define mutateRate 0.3
+#define numMeType 3
+#define numBitSingleMethod 2
+#define numPopulations 100
+#define lenMeSeqConChroms 9
 
 using namespace cv;
 using namespace std;
@@ -21,6 +25,8 @@ struct GeneNode {
 	GeneNode* left;
 	GeneNode* right;
 };
+
+int meSeqConArr[numPopulations][lenMeSeqConChroms];
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -54,14 +60,6 @@ Mat applyGeneTree(const Mat& image, GeneNode* root, int showFlag) {
 		if (current->right) q.push(current->right);
 	}
 
-	if (showFlag) {
-		printf("Final----kernelSize: %d, thresholdValue: %d\n", kernelSize, thresholdValue);
-	}
-
-	if (showFlag) {
-		imgShow("00-res", result);
-	}
-
 	if (filterType == 1) {
 		medianBlur(result, result, kernelSize);
 	}
@@ -69,14 +67,7 @@ Mat applyGeneTree(const Mat& image, GeneNode* root, int showFlag) {
 		blur(result, result, Size(kernelSize, kernelSize));
 	}
 
-	if (showFlag) {
-		imgShow("01-blur", result);
-	}
-
 	threshold(result, result, thresholdValue, 255, THRESH_BINARY);
-	if (showFlag) {
-		imgShow("02-thresh", result);
-	}
 
 	return result;
 }
@@ -135,12 +126,38 @@ void mutate(GeneNode* node) {
 	mutate(node->right);
 }
 
+GeneNode* chromBasedTreeGenerating(int idxPop) { // running in init process
+	GeneNode* rootNode = new GeneNode{ BLUR_TYPE, static_cast<float>(rand() % 2), nullptr, nullptr };
+
+	int zeroFlag = 1;
+	for (int idxChrom = 0; idxChrom < numMeType; idxChrom++) {
+		if (meSeqConArr[idxPop][idxChrom] == 1) zeroFlag = 0;
+	}
+	if (zeroFlag) meSeqConArr[idxPop][0] = 1;
+
+	for (int idxMeFlagChrom = 0; idxMeFlagChrom < numMeType; idxMeFlagChrom++) {
+		if (meSeqConArr[idxPop][idxMeFlagChrom]) {
+			for (int idxMeValChrom = numMeType + )
+		}
+	}
+
+	return rootNode;
+}
+
 vector<GeneNode*> initializePopulation(int populationSize) {
+	for (int idxPop = 0; idxPop < numPopulations; idxPop++) {
+		for (int idxChroms = 0; idxChroms < lenMeSeqConChroms; idxChroms++) {
+			meSeqConArr[idxPop][idxChroms] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
+		}
+	}
+
 	vector<GeneNode*> population;
 	for (int i = 0; i < populationSize; i++) {
+
 		GeneNode* filterNode = new GeneNode{ BLUR_TYPE, static_cast<float>(rand() % 2), nullptr, nullptr };
 		GeneNode* kernelNode = new GeneNode{ KERNEL_SIZE, static_cast<float>((rand() % 5) * 2 + 3), nullptr, nullptr };
 		GeneNode* thresholdNode = new GeneNode{ THRESHOLD, static_cast<float>(rand() % 256), nullptr, nullptr };
+
 		filterNode->left = kernelNode;
 		kernelNode->left = thresholdNode;
 		population.push_back(filterNode);
