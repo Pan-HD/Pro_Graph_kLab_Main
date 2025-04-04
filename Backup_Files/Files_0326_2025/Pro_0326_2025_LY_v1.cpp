@@ -13,6 +13,9 @@
 using namespace cv;
 using namespace std;
 
+// the name of methods
+// ["blur", "kernel", "absoluteFlag", "threshVal", "dilateTimes", "aspectOffset", "contourPixNum"]
+
 enum OperationType {
 	BLUR_TYPE,
 	KERNEL_SIZE,
@@ -137,7 +140,16 @@ GeneNode* chromBasedTreeGenerating(int idxPop) { // running in init process
 
 	for (int idxMeFlagChrom = 0; idxMeFlagChrom < numMeType; idxMeFlagChrom++) {
 		if (meSeqConArr[idxPop][idxMeFlagChrom]) {
-			for (int idxMeValChrom = numMeType + )
+			int startIdx = numMeType + idxMeFlagChrom * numBitSingleMethod;
+			int sumVal = 0;
+			for (int idxMeValChrom = startIdx + numBitSingleMethod - 1; idxMeValChrom >= startIdx; idxMeValChrom--) {
+				sumVal += meSeqConArr[idxPop][idxMeValChrom] * (int)pow(2.0, (double)(numBitSingleMethod - (idxMeValChrom - startIdx) - 1));
+			}
+			if (sumVal >= numMeType) {
+				sumVal = rand() % numMeType;
+			}
+			// GeneNode* curNode = new GeneNode{};
+
 		}
 	}
 
