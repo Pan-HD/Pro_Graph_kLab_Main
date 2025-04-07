@@ -1,0 +1,47 @@
+### Version of Program
+
+---
+
+- P1 - シワ
+  - Single Process
+  - GA
+    - Ori program by Chen
+      - ```Files_Pre - GA_Ori.cpp```
+- P2 - 汚れ・マジック
+  - Single Process
+    - 差分入れ + Labeling 保持 + マスク抜け
+      - ```BcpFiles -> Files_0407_2025 -> ..._v1```
+  - GA
+    - 差分処理抜け・マスク付け - Master Branch
+      - ```BcpFiles -> Files_1211 -> ..._v1```
+  - Decision-Tree based on GA
+    - 差分処理抜け・マスク付け - Master Branch
+      - ```BcpFiles -> Files_1216 -> ..._v1```
+  - Full Search
+    - 差分処理抜け・マスク付け - Master Branch
+      - ```BcpFiles -> Files_1216 -> ..._v2```
+- P3 - チッピング
+  - Single Process
+    - マスク付け - Master Branch
+      - ```BcpFiles -> Files_0131_2025 -> ..._v1```
+    - マスク抜け
+      - ```BcpFiles -> Files_0407_2025 -> ..._v2```
+  - GA
+    - マスク付け - Master Branch
+      - ```BcpFiles -> Files_1225 -> ..._v3```
+- P4 - 汚れ・マジック・チッピング
+  - Single Process
+    - マスク抜け - Master Branch
+      - ```BcpFiles -> Files_0325_2025 -> ..._v3```
+  - GA
+    - マスク抜け - Master Branch
+      - ```BcpFiles -> Files_0331_2025 -> ..._v1```
+  - GP
+    - Version - 01
+      - ```BcpFiles -> Files_0404_2025 -> ..._v1```
+      - test branch
+- P5 - ELSE
+  - Line-chart generating program
+    - ```BcpFiles -> Files_1220 -> ..._v1.py```
+  - generating the mask image with a specified radius
+    - ```BcpFiles -> Files_1104 -> ..._v1```
