@@ -9,8 +9,8 @@ using namespace cv;
 
 #define numSets 4 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
-#define numDV 8 // the nums of decision-variables
-#define chLen 26 // the length of chromosome
+#define numDV 10 // the nums of decision-variables
+#define chLen 36 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -30,9 +30,7 @@ void elite_back(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen);
 void processOnGenLoop(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen, int flagEB);
 void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]);
 void multiProcess(Mat imgArr[][2]);
-void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag);
-void labeling(Mat img, Mat& resImg, int connectivity, int linear);
-void Morphology(Mat img, Mat& resImg, int isDilFirst);
+void gradCal(Mat& srcImg, Mat& dstImg);
 
 typedef struct {
 	int chrom[chLen];
@@ -56,9 +54,9 @@ genInfoType genInfo[num_gen];
 int curMaxFvalIdx = 0;
 
 // the name of decision-variables
-// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "pixelLabelingMethod", "linear", "erodeDilateSequence", "erodeDilateTimes"]
-// erodeDilateSequence: 0 -> dilate first, 1 -> erode first
-int info_len_dv[numDV] = { 1, 6, 1, 8, 1, 5, 1, 3 };
+// ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
+// ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
+int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
 int groupDvMapArr[num_ind][numDV];
 int info_val_dv[numDV];
 int groupDvInfoArr[num_ind][numDV];
@@ -72,8 +70,8 @@ int main(void) {
 	char inputPathName_tar[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_0407_2025_v2/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_0407_2025_v2/input/tarImg_0%d.png", idSet);
+		sprintf_s(inputPathName_ori, "./imgs_0407_2025_v4/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_0407_2025_v4/input/tarImg_0%d.png", idSet);
 		for (int j = 0; j < 2; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -85,8 +83,8 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_0407_2025_v2/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_0407_2025_v2/input/tarImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_ori, "./imgs_0407_2025_v4/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_0407_2025_v4/input/tarImg_0%d.png", i + 1);
 			for (int j = 0; j < 2; j++) {
 				if (j == 0) {
 					imgArr[i][j] = imread(inputPathName_ori, 0);
@@ -111,7 +109,7 @@ void multiProcess(Mat imgArr[][2]) {
 
 	// for recording the f_value of every generation (max, min, ave, dev)
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_0407_2025_v2/output/f_value.txt", "a");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0407_2025_v4/output/f_value.txt", "a");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -119,7 +117,7 @@ void multiProcess(Mat imgArr[][2]) {
 
 	// for recording the decision varibles
 	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_0407_2025_v2/output/params.txt", "a");
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0407_2025_v4/output/params.txt", "a");
 	if (err1 != 0 || fl_params == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -127,7 +125,7 @@ void multiProcess(Mat imgArr[][2]) {
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0407_2025_v2/output/maxFvalInfo_final.txt", "a");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0407_2025_v4/output/maxFvalInfo_final.txt", "a");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -158,24 +156,24 @@ void multiProcess(Mat imgArr[][2]) {
 		if ((idxGen + 1) % 10 == 0) {
 			if (numSets == 1) {
 				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_0407_2025_v2/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+				sprintf_s(imgName_pro[0], "./imgs_0407_2025_v4/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
 				imwrite(imgName_pro[0], resImg_01);
 				if (idxGen == num_gen - 1) {
 					vector<Mat> images = { resImg_01, imgArr[0][1] };
 					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_0407_2025_v2/output/img_0%d/imgs_final.png", idSet);
+					sprintf_s(imgName_final[0], "./imgs_0407_2025_v4/output/img_0%d/imgs_final.png", idSet);
 					imwrite(imgName_final[0], res);
 				}
 			}
 			else {
 				for (int idxSet = 0; idxSet < numSets; idxSet++) {
 					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0407_2025_v2/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+					sprintf_s(imgName_pro[idxSet], "./imgs_0407_2025_v4/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
 					imwrite(imgName_pro[idxSet], resImg_02);
 					if (idxGen == num_gen - 1) {
 						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
 						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0407_2025_v2/output/img_0%d/imgs_final.png", idxSet + 1);
+						sprintf_s(imgName_final[idxSet], "./imgs_0407_2025_v4/output/img_0%d/imgs_final.png", idxSet + 1);
 						imwrite(imgName_final[idxSet], res);
 					}
 				}
@@ -215,50 +213,52 @@ void processOnGenLoop(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen, i
 }
 
 void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
-	Mat blurImg;
-	Mat diffImg;
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	Mat metaImg;
+
+	Mat edges_s1;
+	gradCal(oriImg, edges_s1); // stat-01 -> Sobel
+	// imgShow("res", edges_s1);
+
 	Mat biImg;
-	Mat labelImg;
+	threshold(edges_s1, biImg, arr_val_dv[0], 255, THRESH_BINARY); // stat-02 -> threshold
+	// imgShow("res", biImg);
 
-	if (arr_val_dv[0]) {
-		medianBlur(oriImg, blurImg, arr_val_dv[1]);
-	}
-	else {
-		blur(oriImg, blurImg, Size(arr_val_dv[1], arr_val_dv[1]));
-	}
-
-	differenceProcess(blurImg, oriImg, diffImg, arr_val_dv[2]);
-	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
 	bitwise_not(biImg, biImg);
+	// imgShow("res", biImg);
 
-	if (!arr_val_dv[4])
-	{
-		labeling(biImg, labelImg, 4, arr_val_dv[5]);
-	}
-	else
-	{
-		labeling(biImg, labelImg, 8, arr_val_dv[5]);
-	}
+	vector<Vec3f> circles = circleDetect(biImg, arr_val_dv[1]); // GaussianSize
 
-	if (!arr_val_dv[6]) // 0 -> dilate first
-	{
-		if (arr_val_dv[7] != 0) {
-			for (int idx_edt = 0; idx_edt < arr_val_dv[7]; idx_edt++)
-			{
-				Morphology(labelImg, labelImg, 1);
+	if (circles.size() != 0) { // stat-03
+		for (int y = 0; y < biImg.rows; y++) {
+			for (int x = 0; x < biImg.cols; x++) {
+				if (comDistance(y, x, circles[0], arr_val_dv[2]) != 2) {
+					biImg.at<uchar>(y, x) = 255;
+				}
 			}
 		}
 	}
-	else // 1 -> erode first
-	{
-		if (arr_val_dv[7] != 0) {
-			for (int idx_edt = 0; idx_edt < arr_val_dv[7]; idx_edt++)
-			{
-				Morphology(labelImg, labelImg, 0);
-			}
-		}
+	// imgShow("test", biImg);
+
+	Mat blurImg_mask;
+	medianBlur(biImg, blurImg_mask, arr_val_dv[3]);
+	// imgShow("test", blurImg_mask);
+
+	for (int idxET = 0; idxET < arr_val_dv[4]; idxET++) {
+		erode(blurImg_mask, blurImg_mask, kernel);
 	}
-	resImg = labelImg.clone();
+	// imgShow("test", blurImg_mask);
+
+	contourProcess(blurImg_mask, biImg, arr_val_dv[5], 100 * arr_val_dv[6], circles, arr_val_dv[2]);
+	// imgShow("res", biImg);
+
+	metaImg = biImg.clone();
+	for (int idxET = 0; idxET < arr_val_dv[7]; idxET++) {
+		erode(metaImg, metaImg, kernel);
+	}
+	contourProcess(metaImg, biImg, arr_val_dv[8], 100 * arr_val_dv[9], circles, arr_val_dv[2]);
+	// imgShow("res", biImg);
+	resImg = biImg.clone();
 }
 
 void imgShow(const string& name, const Mat& img) {
@@ -485,87 +485,10 @@ void elite_back(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen) {
 	}
 }
 
-void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag) {
-	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
-	for (int j = 0; j < postImg.rows; j++)
-	{
-		for (int i = 0; i < postImg.cols; i++) {
-			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
-			if (diffVal < 0) {
-				if (absoluteFlag != 0) {
-					diffVal = abs(diffVal);
-				}
-				else {
-					diffVal = 0;
-				}
-			}
-			resImg.at<uchar>(j, i) = diffVal;
-		}
-	}
-}
-
-void labeling(Mat img, Mat& resImg, int connectivity, int linear) {
-	Mat img_con;
-	Mat stats, centroids;
-
-	int label_x, label_y;
-	int label_longer;
-	int label_areaall;
-	double label_cal;
-
-	int i, j, label_num;
-
-	label_num = cv::connectedComponentsWithStats(img, img_con, stats, centroids, connectivity, CV_32S);
-	// colors: for storing the color of background and every connected areas 
-	vector<Vec3b>colors(label_num + 1);
-	colors[0] = Vec3b(0, 0, 0);
-	colors[1] = Vec3b(255, 255, 255);
-
-	for (i = 2; i <= label_num; i++)
-	{
-		// colors[i] = Vec3b(0, 0, 0);
-		label_areaall = stats.at<int>(i, CC_STAT_AREA);
-		label_x = stats.at<int>(i, CC_STAT_WIDTH);
-		label_y = stats.at<int>(i, CC_STAT_HEIGHT);
-
-		label_longer = label_x > label_y ? label_x : label_y;
-		label_cal = label_longer * label_longer;
-
-		// (int)(label_cal / label_areaall) < linear -> detected area is not a fold-area
-		//  In fold-detect task: discard -> colors[i] = Vec3b(255, 255, 255);
-		if ((int)(label_cal / label_areaall) < linear + 127)
-		{
-			colors[i] = Vec3b(0, 0, 0); // in spot-detect task
-		}
-		else {
-			colors[i] = Vec3b(255, 255, 255); // in spot-detect task
-		}
-	}
-
-	// CV_8UC3: 3 channels
-	Mat img_color = Mat::zeros(img_con.size(), CV_8UC3);
-	for (j = 0; j < img_con.rows; j++) {
-		for (i = 0; i < img_con.cols; i++)
-		{
-			int label = img_con.at<int>(j, i);
-			CV_Assert(0 <= label && label <= label_num); // make sure the num of label is leagal
-			img_color.at<Vec3b>(j, i) = colors[label];
-		}
-	}
-	cvtColor(img_color, img_color, COLOR_RGB2GRAY);
-	resImg = img_color.clone();
-}
-
-void Morphology(Mat img, Mat& resImg, int isDilFirst) {
-	Mat dst;
-	dst.create(img.size(), img.type());
-	if (isDilFirst) {
-		dilate(img, dst, Mat());
-		erode(dst, dst, Mat());
-	}
-	else {
-		erode(img, dst, Mat());
-		dilate(dst, dst, Mat());
-	}
-	resImg = dst.clone();
+void gradCal(Mat& srcImg, Mat& dstImg) {
+	Mat sobelX, sobelY, gradientMagnitude;
+	Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
+	Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
+	magnitude(sobelX, sobelY, gradientMagnitude);
+	normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
 }

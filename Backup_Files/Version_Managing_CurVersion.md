@@ -14,6 +14,8 @@
   - GA
     - 差分処理抜け・マスク付け - Master Branch
       - ```BcpFiles -> Files_1211 -> ..._v1```
+    - 差分入れ + Labeling 保持 + マスク抜け
+      - ```BcpFiles -> Files_0407_2025 -> ..._v2```
   - Decision-Tree based on GA
     - 差分処理抜け・マスク付け - Master Branch
       - ```BcpFiles -> Files_1216 -> ..._v1```
@@ -24,8 +26,8 @@
   - Single Process
     - マスク付け - Master Branch
       - ```BcpFiles -> Files_0131_2025 -> ..._v1```
-    - マスク抜け
-      - ```BcpFiles -> Files_0407_2025 -> ..._v2```
+    - マスク抜け・Sobel入れ
+      - ```BcpFiles -> Files_0407_2025 -> ..._v3```
   - GA
     - マスク付け - Master Branch
       - ```BcpFiles -> Files_1225 -> ..._v3```
