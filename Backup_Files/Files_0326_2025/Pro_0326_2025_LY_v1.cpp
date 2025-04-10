@@ -5,23 +5,16 @@
 #include <cstdlib>
 
 #define mutateRate 0.3
-#define numMeType 3
-#define numBitSingleMethod 2
-#define numPopulations 100
-#define lenMeSeqConChroms 9
 
 using namespace cv;
 using namespace std;
-
-// the name of methods
-// ["blur", "kernel", "absoluteFlag", "threshVal", "dilateTimes", "aspectOffset", "contourPixNum"]
-
+// 定义基因树节点类型
 enum OperationType {
-	BLUR_TYPE,
-	KERNEL_SIZE,
-	THRESHOLD
+	BLUR_TYPE,    // 滤波类型（中值滤波 or 均值滤波）
+	KERNEL_SIZE,  // 滤波核大小
+	THRESHOLD     // 二值化阈值
 };
-
+// 基因树节点结构
 struct GeneNode {
 	OperationType opType;
 	float param;
@@ -29,20 +22,19 @@ struct GeneNode {
 	GeneNode* right;
 };
 
-int meSeqConArr[numPopulations][lenMeSeqConChroms];
-
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
 	waitKey(0);
 	destroyAllWindows();
 }
 
+// **应用基因树到图像处理**
 Mat applyGeneTree(const Mat& image, GeneNode* root, int showFlag) {
 	Mat result = image.clone();
 	int filterType = 0; // 0: average, 1: Median
 	int kernelSize = 3;
 	int thresholdValue = 128;
-
+	// **遍历整棵基因树，提取参数**
 	queue<GeneNode*> q;
 	q.push(root);
 	while (!q.empty()) {
@@ -53,16 +45,25 @@ Mat applyGeneTree(const Mat& image, GeneNode* root, int showFlag) {
 		}
 		else if (current->opType == KERNEL_SIZE) {
 			kernelSize = static_cast<int>(current->param);
-			if (kernelSize % 2 == 0) kernelSize += 1;
+			if (kernelSize % 2 == 0) kernelSize += 1;  // 确保 kernel size 为奇数
 		}
 		else if (current->opType == THRESHOLD) {
 			thresholdValue = static_cast<int>(current->param);
-			thresholdValue = max(0, min(thresholdValue, 255));
+			thresholdValue = max(0, min(thresholdValue, 255)); // 限制范围
 		}
 		if (current->left) q.push(current->left);
 		if (current->right) q.push(current->right);
 	}
 
+	if (showFlag) {
+		printf("Final----kernelSize: %d, thresholdValue: %d\n", kernelSize, thresholdValue);
+	}
+
+	if (showFlag) {
+		imgShow("00-res", result);
+	}
+
+	// **执行滤波**
 	if (filterType == 1) {
 		medianBlur(result, result, kernelSize);
 	}
@@ -70,11 +71,20 @@ Mat applyGeneTree(const Mat& image, GeneNode* root, int showFlag) {
 		blur(result, result, Size(kernelSize, kernelSize));
 	}
 
+	if (showFlag) {
+		imgShow("01-blur", result);
+	}
+
+	// **执行二值化**
+	// threshold(result, result, 127, 255, THRESH_BINARY);
 	threshold(result, result, thresholdValue, 255, THRESH_BINARY);
+	if (showFlag) {
+		imgShow("02-thresh", result);
+	}
 
 	return result;
 }
-
+// **计算精准率、召回率、F 值**
 float calculatePrecision(int TP, int FP) { return (TP + FP == 0) ? 0 : static_cast<float>(TP) / (TP + FP); }
 float calculateRecall(int TP, int FN) { return (TP + FN == 0) ? 0 : static_cast<float>(TP) / (TP + FN); }
 float calculateFValue(float precision, float recall) { return (precision + recall == 0) ? 0 : 2 * precision * recall / (precision + recall); }
@@ -84,9 +94,12 @@ double calculateF1Score(double precision, double recall) {
 	return 2.0 * (precision * recall) / (precision + recall);
 }
 
+// **评估基因树**
 float evaluateGeneTree(const Mat& image, GeneNode* node, const Mat& targetImage) {
 	Mat processedImage = applyGeneTree(image, node, 0); // processedImg, tarImg
+
 	int tp = 0, fp = 0, fn = 0;
+
 	for (int i = 0; i < image.rows; i++) {
 		for (int j = 0; j < image.cols; j++) {
 			if (processedImage.at<uchar>(i, j) == 0 && targetImage.at<uchar>(i, j) == 0) {
@@ -106,9 +119,24 @@ float evaluateGeneTree(const Mat& image, GeneNode* node, const Mat& targetImage)
 	double precision = (tp + fp > 0) ? tp / double(tp + fp) : 0.0;
 	double recall = (tp + fn > 0) ? tp / double(tp + fn) : 0.0;
 	float score = (float)calculateF1Score(precision, recall);
-	return score;
-}
 
+	return score;
+	//Mat diff;
+	//absdiff(processedImage, targetImage, diff);
+	//Mat binaryDiff;
+	//threshold(diff, binaryDiff, 128, 255, THRESH_BINARY);
+	//int TP = 0, FP = 0, FN = 0;
+	//for (int i = 0; i < binaryDiff.rows; i++) {
+	//	for (int j = 0; j < binaryDiff.cols; j++) {
+	//		uchar pixelDiff = binaryDiff.at<uchar>(i, j);
+	//		if (pixelDiff == 0 && targetImage.at<uchar>(i, j) == 0) TP++;
+	//		else if (pixelDiff == 0 && targetImage.at<uchar>(i, j) == 255) FP++;
+	//		else if (pixelDiff == 255 && targetImage.at<uchar>(i, j) == 0) FN++;
+	//	}
+	//}
+	//return calculateFValue(calculatePrecision(TP, FP), calculateRecall(TP, FN));
+}
+// **交叉与变异**
 GeneNode* crossover(GeneNode* parent1, GeneNode* parent2) {
 	if (!parent1 || !parent2) return nullptr;
 	GeneNode* child = new GeneNode(*parent1);
@@ -117,7 +145,6 @@ GeneNode* crossover(GeneNode* parent1, GeneNode* parent2) {
 	child->right = crossover(parent1->right, parent2->right);
 	return child;
 }
-
 void mutate(GeneNode* node) {
 	if (!node) return;
 	if (rand() <= RAND_MAX * mutateRate) {
@@ -128,55 +155,23 @@ void mutate(GeneNode* node) {
 	mutate(node->left);
 	mutate(node->right);
 }
-
-GeneNode* chromBasedTreeGenerating(int idxPop) { // running in init process
-	GeneNode* rootNode = new GeneNode{ BLUR_TYPE, static_cast<float>(rand() % 2), nullptr, nullptr };
-
-	int zeroFlag = 1;
-	for (int idxChrom = 0; idxChrom < numMeType; idxChrom++) {
-		if (meSeqConArr[idxPop][idxChrom] == 1) zeroFlag = 0;
-	}
-	if (zeroFlag) meSeqConArr[idxPop][0] = 1;
-
-	for (int idxMeFlagChrom = 0; idxMeFlagChrom < numMeType; idxMeFlagChrom++) {
-		if (meSeqConArr[idxPop][idxMeFlagChrom]) {
-			int startIdx = numMeType + idxMeFlagChrom * numBitSingleMethod;
-			int sumVal = 0;
-			for (int idxMeValChrom = startIdx + numBitSingleMethod - 1; idxMeValChrom >= startIdx; idxMeValChrom--) {
-				sumVal += meSeqConArr[idxPop][idxMeValChrom] * (int)pow(2.0, (double)(numBitSingleMethod - (idxMeValChrom - startIdx) - 1));
-			}
-			if (sumVal >= numMeType) {
-				sumVal = rand() % numMeType;
-			}
-			// GeneNode* curNode = new GeneNode{};
-
-		}
-	}
-
-	return rootNode;
-}
-
+// **初始化种群**
 vector<GeneNode*> initializePopulation(int populationSize) {
-	for (int idxPop = 0; idxPop < numPopulations; idxPop++) {
-		for (int idxChroms = 0; idxChroms < lenMeSeqConChroms; idxChroms++) {
-			meSeqConArr[idxPop][idxChroms] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
-		}
-	}
-
 	vector<GeneNode*> population;
 	for (int i = 0; i < populationSize; i++) {
-
 		GeneNode* filterNode = new GeneNode{ BLUR_TYPE, static_cast<float>(rand() % 2), nullptr, nullptr };
 		GeneNode* kernelNode = new GeneNode{ KERNEL_SIZE, static_cast<float>((rand() % 5) * 2 + 3), nullptr, nullptr };
 		GeneNode* thresholdNode = new GeneNode{ THRESHOLD, static_cast<float>(rand() % 256), nullptr, nullptr };
-
 		filterNode->left = kernelNode;
-		kernelNode->left = thresholdNode;
+		filterNode->right = thresholdNode;
+
+		// kernelNode->left = thresholdNode;
+
 		population.push_back(filterNode);
 	}
 	return population;
 }
-
+// **遗传编程**
 GeneNode* geneticAlgorithm(const Mat& image, const Mat& targetImage, int generations, int populationSize) {
 	vector<GeneNode*> population = initializePopulation(populationSize);
 	vector<float> fitnessScores(populationSize);
@@ -190,13 +185,16 @@ GeneNode* geneticAlgorithm(const Mat& image, const Mat& targetImage, int generat
 		cout << "Generation " << gen + 1 << ": Best F-value = " << fitnessScores[bestIndex]
 			<< ", Filter Type: " << (bestIndividual->param == 1 ? "Median" : "Average")
 			<< ", Kernel Size: " << bestIndividual->left->param
-			<< ", Threshold: " << bestIndividual->left->left->param << endl;
+			<< ", Threshold: " << bestIndividual->right->param << endl;
 
 		if (gen != generations - 1) {
 			GeneNode* child = crossover(bestIndividual, population[rand() % populationSize]);
 			mutate(child);
 			population[rand() % populationSize] = child;
 		}
+		//GeneNode* child = crossover(bestIndividual, population[rand() % populationSize]);
+		//mutate(child);
+		//population[rand() % populationSize] = child;
 	}
 	return population[bestIndex];
 }
@@ -204,8 +202,7 @@ int main() {
 	srand(static_cast<unsigned int>(time(0)));
 	Mat image = imread("./imgs_0326_2025_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
 	Mat targetImage = imread("./imgs_0326_2025_v1/input/tarImg_01.png", IMREAD_GRAYSCALE);
-
-	GeneNode* bestSolution = geneticAlgorithm(image, targetImage, 100, 100);
+	GeneNode* bestSolution = geneticAlgorithm(image, targetImage, 100, 20);
 	Mat processedImage = applyGeneTree(image, bestSolution, 1);
 	imshow("Best Solution", processedImage);
 	waitKey(0);
