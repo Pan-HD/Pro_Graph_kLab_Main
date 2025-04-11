@@ -142,12 +142,10 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 }
 
 int main(void) {
-	Mat oriImg = imread("./imgs_1225_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
+	Mat oriImg = imread("./imgs_0407_2025_v3/input/oriImg_04.png", IMREAD_GRAYSCALE);
 	// imgShow("res", oriImg);
-
 	Mat resImg;
 	imgSingleProcess(oriImg, resImg, info_val_dv);
-	// imgShow("res", resImg);
-
+	imgShow("res", resImg);
 	return 0;
 }

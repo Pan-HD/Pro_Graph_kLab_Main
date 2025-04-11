@@ -9,8 +9,8 @@ using namespace cv;
 
 #define numSets 4 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
-#define numDV 10 // the nums of decision-variables
-#define chLen 36 // the length of chromosome
+#define numDV 7 // the nums of decision-variables
+#define chLen 25 // the length of chromosome
 #define num_ind 100 // the nums of individuals in the group
 #define num_gen 100 // the nums of generation of the GA algorithm
 #define cross 0.8 // the rate of cross
@@ -26,14 +26,12 @@ void fitness(int numGen);
 int roulette();
 void crossover();
 void mutation();
-void elite_back(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen);
-void processOnGenLoop(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen, int flagEB);
+void elite_back(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen);
+void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag);
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums);
+void processOnGenLoop(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen, int flagEB);
 void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]);
-void multiProcess(Mat imgArr[][2]);
-void gradCal(Mat& srcImg, Mat& dstImg);
-vector<Vec3f> circleDetect(Mat img, int gaussianSize);
-int comDistance(int y, int x, Vec3f circle, int circleOffset);
-void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles, int circleOffset);
+void multiProcess(Mat imgArr[][3]);
 
 typedef struct {
 	int chrom[chLen];
@@ -57,9 +55,8 @@ genInfoType genInfo[num_gen];
 int curMaxFvalIdx = 0;
 
 // the name of decision-variables
-// ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
-// ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
-int info_len_dv[numDV] = { 8, 4, 4, 4, 2, 3, 3, 2, 3, 3 };
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "dilateTimes", "aspectOffset", "contourPixNum"]
+int info_len_dv[numDV] = { 1, 6, 1, 8, 2, 3, 4 };
 int groupDvMapArr[num_ind][numDV];
 int info_val_dv[numDV];
 int groupDvInfoArr[num_ind][numDV];
@@ -68,13 +65,14 @@ int groupDvInfoArr[num_ind][numDV];
 double indFvalInfo[num_ind][numSets + 1];
 
 int main(void) {
-	Mat imgArr[numSets][2]; // imgArr -> storing all images 2(2 pairs) * 3(ori, tar)
+	Mat imgArr[numSets][3]; // imgArr -> storing all images 2(2 pairs) * 3(ori, tar, mask)
 	char inputPathName_ori[256];
 	char inputPathName_tar[256];
+	// char inputPathName_mask[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_0407_2025_v4/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_0407_2025_v4/input/tarImg_0%d.png", idSet);
+		sprintf_s(inputPathName_ori, "./imgs_0331_2025_v1/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_0331_2025_v1/input/tarImg_0%d.png", idSet);
 		for (int j = 0; j < 2; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -86,8 +84,8 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_0407_2025_v4/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_0407_2025_v4/input/tarImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_ori, "./imgs_0331_2025_v1/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_0331_2025_v1/input/tarImg_0%d.png", i + 1);
 			for (int j = 0; j < 2; j++) {
 				if (j == 0) {
 					imgArr[i][j] = imread(inputPathName_ori, 0);
@@ -101,167 +99,6 @@ int main(void) {
 
 	multiProcess(imgArr);
 	return 0;
-}
-
-void multiProcess(Mat imgArr[][2]) {
-	Mat resImg[numSets];
-	Mat tarImg[numSets];
-
-	char imgName_pro[numSets][256];
-	char imgName_final[numSets][256];
-
-	// for recording the f_value of every generation (max, min, ave, dev)
-	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_0407_2025_v4/output/f_value.txt", "a");
-	if (err != 0 || fl_fValue == nullptr) {
-		perror("Cannot open the file");
-		return;
-	}
-
-	// for recording the decision varibles
-	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_0407_2025_v4/output/params.txt", "a");
-	if (err1 != 0 || fl_params == nullptr) {
-		perror("Cannot open the file");
-		return;
-	}
-
-	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
-	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0407_2025_v4/output/maxFvalInfo_final.txt", "a");
-	if (err2 != 0 || fl_maxFval == nullptr) {
-		perror("Cannot open the file");
-		return;
-	}
-
-	srand((unsigned)time(NULL));
-	make();
-
-	for (int numGen = 0; numGen < num_gen; numGen++) {
-		cout << "-------generation: " << numGen + 1 << "---------" << endl;
-		processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
-
-		fitness(numGen);
-		printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
-
-		// preparing for next generation
-		if (numGen < num_gen - 1) {
-			crossover();
-			mutation();
-			elite_back(imgArr, resImg, tarImg, numGen);
-		}
-	}
-
-	Mat resImg_01;
-	Mat resImg_02;
-	Mat res;
-	for (int idxGen = 0; idxGen < num_gen; idxGen++) {
-		if ((idxGen + 1) % 10 == 0) {
-			if (numSets == 1) {
-				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_0407_2025_v4/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
-				imwrite(imgName_pro[0], resImg_01);
-				if (idxGen == num_gen - 1) {
-					vector<Mat> images = { resImg_01, imgArr[0][1] };
-					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_0407_2025_v4/output/img_0%d/imgs_final.png", idSet);
-					imwrite(imgName_final[0], res);
-				}
-			}
-			else {
-				for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0407_2025_v4/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-					imwrite(imgName_pro[idxSet], resImg_02);
-					if (idxGen == num_gen - 1) {
-						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0407_2025_v4/output/img_0%d/imgs_final.png", idxSet + 1);
-						imwrite(imgName_final[idxSet], res);
-					}
-				}
-			}
-		}
-	}
-	for (int i = 0; i < num_gen; i++) {
-		fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-	}
-	for (int idxDV = 0; idxDV < numDV; idxDV++) {
-		fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
-	}
-	fprintf(fl_params, "\n");
-
-	for (int i = 0; i <= numSets; i++) {
-		fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
-	}
-	fprintf(fl_maxFval, "\n");
-
-	fclose(fl_fValue);
-	fclose(fl_params);
-	fclose(fl_maxFval);
-}
-
-void processOnGenLoop(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen, int flagEB) {
-	phenotype();
-	for (int numInd = 0; numInd < num_ind; numInd++) {
-		import_para(numInd);
-		for (int i = 0; i < numSets; i++) {
-			imgSingleProcess(imgArr[i][0], resImg[i], info_val_dv);
-		}
-		for (int i = 0; i < numSets; i++) {
-			tarImg[i] = imgArr[i][1];
-		}
-		calculateMetrics(resImg, tarImg, numInd, numGen, flagEB);
-	}
-}
-
-void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-	Mat metaImg;
-
-	Mat edges_s1;
-	gradCal(oriImg, edges_s1); // stat-01 -> Sobel
-	// imgShow("res", edges_s1);
-
-	Mat biImg;
-	threshold(edges_s1, biImg, arr_val_dv[0], 255, THRESH_BINARY); // stat-02 -> threshold
-	// imgShow("res", biImg);
-
-	bitwise_not(biImg, biImg);
-	// imgShow("res", biImg);
-
-	vector<Vec3f> circles = circleDetect(biImg, arr_val_dv[1]); // GaussianSize
-
-	if (circles.size() != 0) { // stat-03
-		for (int y = 0; y < biImg.rows; y++) {
-			for (int x = 0; x < biImg.cols; x++) {
-				if (comDistance(y, x, circles[0], arr_val_dv[2]) != 2) {
-					biImg.at<uchar>(y, x) = 255;
-				}
-			}
-		}
-	}
-	// imgShow("test", biImg);
-
-	Mat blurImg_mask;
-	medianBlur(biImg, blurImg_mask, arr_val_dv[3]);
-	// imgShow("test", blurImg_mask);
-
-	for (int idxET = 0; idxET < arr_val_dv[4]; idxET++) {
-		erode(blurImg_mask, blurImg_mask, kernel);
-	}
-	// imgShow("test", blurImg_mask);
-
-	contourProcess(blurImg_mask, biImg, arr_val_dv[5], 100 * arr_val_dv[6], circles, arr_val_dv[2]);
-	// imgShow("res", biImg);
-
-	metaImg = biImg.clone();
-	for (int idxET = 0; idxET < arr_val_dv[7]; idxET++) {
-		erode(metaImg, metaImg, kernel);
-	}
-	contourProcess(metaImg, biImg, arr_val_dv[8], 100 * arr_val_dv[9], circles, arr_val_dv[2]);
-	// imgShow("res", biImg);
-	resImg = biImg.clone();
 }
 
 void imgShow(const string& name, const Mat& img) {
@@ -473,7 +310,7 @@ void mutation() {
 	}
 }
 
-void elite_back(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen) {
+void elite_back(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen) {
 	processOnGenLoop(imgArr, resImg, tarImg, numGen, 1);
 	int idxMinFVal = 0;
 	double minFVal = genInfo[numGen].eliteFValue;
@@ -488,41 +325,26 @@ void elite_back(Mat imgArr[][2], Mat resImg[], Mat tarImg[], int numGen) {
 	}
 }
 
-void gradCal(Mat& srcImg, Mat& dstImg) {
-	Mat sobelX, sobelY, gradientMagnitude;
-	Sobel(srcImg, sobelX, CV_64F, 1, 0, 1);
-	Sobel(srcImg, sobelY, CV_64F, 0, 1, 1);
-	magnitude(sobelX, sobelY, gradientMagnitude);
-	normalize(gradientMagnitude, dstImg, 0, 255, NORM_MINMAX, CV_8U);
-}
-
-vector<Vec3f> circleDetect(Mat img, int gaussianSize) {
-	Mat blurred;
-	// GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
-	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
-	// imgShow("res", blurred);
-	vector<Vec3f> circles;
-	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
-	return circles;
-}
-
-int comDistance(int y, int x, Vec3f circle, int circleOffset) {
-	int centerX = (int)circle[0];
-	int centerY = (int)circle[1];
-	int radius = (int)circle[2];
-	int distance = (int)sqrt(pow((double)(x - centerX), 2) + pow((double)(y - centerY), 2));
-	if (distance > radius) {
-		return 0;
-	}
-	else if (distance > radius - circleOffset && distance <= radius) {
-		return 1;
-	}
-	else {
-		return 2;
+void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag) {
+	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
+	for (int j = 0; j < postImg.rows; j++)
+	{
+		for (int i = 0; i < postImg.cols; i++) {
+			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
+			if (diffVal < 0) {
+				if (absoluteFlag != 0) {
+					diffVal = abs(diffVal);
+				}
+				else {
+					diffVal = 0;
+				}
+			}
+			resImg.at<uchar>(j, i) = diffVal;
+		}
 	}
 }
 
-void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vector<Vec3f> circles, int circleOffset) {
+void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums) {
 	vector<vector<Point>> contours;
 	findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
 	Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
@@ -533,18 +355,146 @@ void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums, vec
 			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
 		}
 	}
-	// imgShow("mask", mask);
+	for (int y = 0; y < resImg.rows; y++) {
+		for (int x = 0; x < resImg.cols; x++) {
+			if (mask.at<uchar>(y, x) == 255) {
+				resImg.at<uchar>(y, x) = 255;
+			}
+		}
+	}
+}
 
-	if (circles.size() != 0) {
-		for (int y = 0; y < resImg.rows; y++) {
-			for (int x = 0; x < resImg.cols; x++) {
-				if (comDistance(y, x, circles[0], circleOffset) == 2) {
-					if (mask.at<uchar>(y, x) == 255) {
-						resImg.at<uchar>(y, x) = 255;
+void processOnGenLoop(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen, int flagEB) {
+	phenotype();
+	for (int numInd = 0; numInd < num_ind; numInd++) {
+		import_para(numInd);
+		for (int i = 0; i < numSets; i++) {
+			imgSingleProcess(imgArr[i][0], resImg[i], info_val_dv);
+		}
+		for (int i = 0; i < numSets; i++) {
+			tarImg[i] = imgArr[i][1];
+		}
+		calculateMetrics(resImg, tarImg, numInd, numGen, flagEB);
+	}
+}
+
+void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
+	Mat blurImg;
+	Mat diffImg;
+	Mat biImg;
+	Mat labelImg;
+	if (arr_val_dv[0]) {
+		medianBlur(oriImg, blurImg, arr_val_dv[1]);
+	}
+	else {
+		blur(oriImg, blurImg, Size(arr_val_dv[1], arr_val_dv[1]));
+	}
+	differenceProcess(blurImg, oriImg, diffImg, arr_val_dv[2]);
+	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
+	bitwise_not(biImg, biImg);
+	Mat maskImg = biImg.clone();
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+	for (int idxET = 0; idxET < arr_val_dv[4]; idxET++) {
+		erode(maskImg, maskImg, kernel);
+	}
+	contourProcess(maskImg, biImg, arr_val_dv[5], 100 * arr_val_dv[6]);
+	resImg = biImg.clone();
+}
+
+void multiProcess(Mat imgArr[][3]) {
+	Mat resImg[numSets];
+	Mat tarImg[numSets];
+
+	char imgName_pro[numSets][256];
+	char imgName_final[numSets][256];
+
+	// for recording the f_value of every generation (max, min, ave, dev)
+	FILE* fl_fValue = nullptr;
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0331_2025_v1/output/f_value.txt", "a");
+	if (err != 0 || fl_fValue == nullptr) {
+		perror("Cannot open the file");
+		return;
+	}
+
+	// for recording the decision varibles
+	FILE* fl_params = nullptr;
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0331_2025_v1/output/params.txt", "a");
+	if (err1 != 0 || fl_params == nullptr) {
+		perror("Cannot open the file");
+		return;
+	}
+
+	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
+	FILE* fl_maxFval = nullptr;
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0331_2025_v1/output/maxFvalInfo_final.txt", "a");
+	if (err2 != 0 || fl_maxFval == nullptr) {
+		perror("Cannot open the file");
+		return;
+	}
+
+	srand((unsigned)time(NULL));
+	make();
+
+	for (int numGen = 0; numGen < num_gen; numGen++) {
+		cout << "-------generation: " << numGen + 1 << "---------" << endl;
+		processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
+
+		fitness(numGen);
+		printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
+
+		// preparing for next generation
+		if (numGen < num_gen - 1) {
+			crossover();
+			mutation();
+			elite_back(imgArr, resImg, tarImg, numGen);
+		}
+	}
+
+	Mat resImg_01;
+	Mat resImg_02;
+	Mat res;
+	for (int idxGen = 0; idxGen < num_gen; idxGen++) {
+		if ((idxGen + 1) % 10 == 0) {
+			if (numSets == 1) {
+				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
+				sprintf_s(imgName_pro[0], "./imgs_0331_2025_v1/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+				imwrite(imgName_pro[0], resImg_01);
+				if (idxGen == num_gen - 1) {
+					vector<Mat> images = { resImg_01, imgArr[0][1] };
+					hconcat(images, res);
+					sprintf_s(imgName_final[0], "./imgs_0331_2025_v1/output/img_0%d/imgs_final.png", idSet);
+					imwrite(imgName_final[0], res);
+				}
+			}
+			else {
+				for (int idxSet = 0; idxSet < numSets; idxSet++) {
+					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
+					sprintf_s(imgName_pro[idxSet], "./imgs_0331_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+					imwrite(imgName_pro[idxSet], resImg_02);
+					if (idxGen == num_gen - 1) {
+						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+						hconcat(images, res);
+						sprintf_s(imgName_final[idxSet], "./imgs_0331_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
+						imwrite(imgName_final[idxSet], res);
 					}
 				}
 			}
 		}
 	}
-	// imgShow("res", resImg);
+	for (int i = 0; i < num_gen; i++) {
+		fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+	}
+	for (int idxDV = 0; idxDV < numDV; idxDV++) {
+		fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
+	}
+	fprintf(fl_params, "\n");
+
+	for (int i = 0; i <= numSets; i++) {
+		fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
+	}
+	fprintf(fl_maxFval, "\n");
+
+	fclose(fl_fValue);
+	fclose(fl_params);
+	fclose(fl_maxFval);
 }

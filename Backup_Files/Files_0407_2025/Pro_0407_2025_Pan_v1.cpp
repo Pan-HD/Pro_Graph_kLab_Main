@@ -7,15 +7,10 @@
 using namespace std;
 using namespace cv;
 
-// the declaration of 8 decision variables (with the sum-fVal of 3.5645)
-int fsize = 27;
-int binary = 63;
-int linear = 5;
-int filterswitch_flag = 1;
-int erodedilate_times = 5;
-int erodedilate_sequence = 1;
-int abusolute_flag = 0;
-int pixellabelingmethod = 1;
+// the name of decision-variables
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "pixelLabelingMethod", "linear", "erodeDilateSequence", "erodeDilateTimes"]
+// erodeDilateSequence: 0 -> dilate first, 1 -> erode first
+int info_val_dv[8] = { 1, 13, 0, 33, 0, 26, 1, 0 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -23,14 +18,14 @@ void imgShow(const string& name, const Mat& img) {
 	destroyAllWindows();
 }
 
-void differenceProcess(Mat postImg, Mat preImg, Mat& resImg) {
+void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag) {
 	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
 	for (int j = 0; j < postImg.rows; j++)
 	{
 		for (int i = 0; i < postImg.cols; i++) {
 			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
 			if (diffVal < 0) {
-				if (abusolute_flag != 0) {
+				if (absoluteFlag != 0) {
 					diffVal = abs(diffVal);
 				}
 				else {
@@ -42,7 +37,7 @@ void differenceProcess(Mat postImg, Mat preImg, Mat& resImg) {
 	}
 }
 
-void labeling(Mat img, Mat& resImg, int connectivity) {
+void labeling(Mat img, Mat& resImg, int connectivity, int linear) {
 	Mat img_con;
 	Mat stats, centroids;
 
@@ -94,17 +89,6 @@ void labeling(Mat img, Mat& resImg, int connectivity) {
 	resImg = img_color.clone();
 }
 
-vector<Vec3f> circleDetect(Mat img, int gaussianSize) {
-	Mat blurred;
-	// GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
-	GaussianBlur(img, blurred, Size(gaussianSize, gaussianSize), 0, 0);
-	// imgShow("res", blurred);
-
-	vector<Vec3f> circles;
-	HoughCircles(blurred, circles, HOUGH_GRADIENT, 1, blurred.rows / 8, 200, 100, 0, 0);
-	return circles;
-}
-
 void Morphology(Mat img, Mat& resImg, int isDilFirst) {
 	Mat dst;
 	dst.create(img.size(), img.type());
@@ -119,64 +103,57 @@ void Morphology(Mat img, Mat& resImg, int isDilFirst) {
 	resImg = dst.clone();
 }
 
-int main(void) {
-	Mat oriImg = imread("./imgs_0321_2025_v1/input/oriImg_01.png", IMREAD_GRAYSCALE);
-
-	// imgShow("ori", oriImg);
-
+void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 	Mat blurImg;
 	Mat diffImg;
 	Mat biImg;
 	Mat labelImg;
 
-	// bluring
-	if (filterswitch_flag) {
-		medianBlur(oriImg, blurImg, fsize); // marked
+	if (arr_val_dv[0]) {
+		medianBlur(oriImg, blurImg, arr_val_dv[1]);
 	}
 	else {
-		blur(oriImg, blurImg, Size(fsize, fsize));
+		blur(oriImg, blurImg, Size(arr_val_dv[1], arr_val_dv[1]));
 	}
-	// imgShow("res", blurImg);
 
-	differenceProcess(blurImg, oriImg, diffImg);
-	// imgShow("res", diffImg);
-
-	threshold(diffImg, biImg, binary, 255, THRESH_BINARY);
-	// imgShow("res", biImg);
-
+	differenceProcess(blurImg, oriImg, diffImg, arr_val_dv[2]);
+	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
 	bitwise_not(biImg, biImg);
-	// imgShow("res", biImg);
 
-	if (!pixellabelingmethod)
+	if (!arr_val_dv[4])
 	{
-		labeling(biImg, labelImg, 4);
+		labeling(biImg, labelImg, 4, arr_val_dv[5]);
 	}
 	else
 	{
-		labeling(biImg, labelImg, 8);
+		labeling(biImg, labelImg, 8, arr_val_dv[5]);
 	}
-	// imgShow("res", labelImg);
 
-	// Morphology
-	if (!erodedilate_sequence)
+	if (!arr_val_dv[6]) // 0 -> dilate first
 	{
-		if (erodedilate_times != 0) {
-			for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
+		if (arr_val_dv[7] != 0) {
+			for (int idx_edt = 0; idx_edt < arr_val_dv[7]; idx_edt++)
 			{
 				Morphology(labelImg, labelImg, 1);
 			}
 		}
 	}
-	else
+	else // 1 -> erode first
 	{
-		if (erodedilate_times != 0) {
-			for (int idx_edt = 0; idx_edt < erodedilate_times; idx_edt++)
+		if (arr_val_dv[7] != 0) {
+			for (int idx_edt = 0; idx_edt < arr_val_dv[7]; idx_edt++)
 			{
 				Morphology(labelImg, labelImg, 0);
 			}
 		}
 	}
-	// imgShow("res", labelImg);
+	resImg = labelImg.clone();
+}
 
+int main(void) {
+	Mat oriImg = imread("./imgs_0321_2025_v1/input/oriImg_02.png", IMREAD_GRAYSCALE);
+	Mat resImg;
+	imgSingleProcess(oriImg, resImg, info_val_dv);
+	imgShow("res", resImg);
 	return 0;
 }
