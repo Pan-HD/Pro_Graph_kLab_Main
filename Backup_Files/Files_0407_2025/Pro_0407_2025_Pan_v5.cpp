@@ -8,8 +8,9 @@ using namespace std;
 using namespace cv;
 
 // the name of decision-variables
-// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "dilateTimes", "aspectOffset", "contourPixNum"]
-int info_val_dv[7] = { 1, 17, 0, 10, 3, 0, 2 };
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal"]
+// ["dilateTimes", "aspectOffset", "contourPixNum"]
+int info_val_dv[7] = { 1, 17, 0, 9, 3, 0, 2 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);

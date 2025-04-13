@@ -10,9 +10,11 @@ using namespace cv;
 // the name of decision-variables
 // ["threshVal", "gaussianSize", "circleOffset", "meidanSize", "dilateTimes_01"]
 // ["aspectOffset_01", "contourPixNums_01", "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
+int info_val_dv[10] = { 18, 23, 11, 3, 1, 5, 7, 2, 0, 7 };
+
 
 // for Set-01
-int info_val_dv[10] = { 17, 13, 10, 5, 1, 0, 6, 1, 0, 4 };
+// int info_val_dv[10] = { 17, 13, 10, 5, 1, 0, 6, 1, 0, 4 };
 // int info_val_dv[10] = { 17, 17, 10, 3, 0, 1, 7, 1, 0, 5 };
 
 // for Set-02

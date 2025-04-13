@@ -8,8 +8,8 @@ using namespace std;
 using namespace cv;
 
 // the name of decision-variables
-// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "pixelLabelingMethod", "linear", "erodeDilateSequence", "erodeDilateTimes"]
-// erodeDilateSequence: 0 -> dilate first, 1 -> erode first
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal"]
+// ["pixelLabelingMethod", "linear", "erodeDilateSequence", "erodeDilateTimes"]
 int info_val_dv[8] = { 1, 13, 0, 33, 0, 26, 1, 0 };
 
 void imgShow(const string& name, const Mat& img) {
@@ -129,6 +129,7 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 		labeling(biImg, labelImg, 8, arr_val_dv[5]);
 	}
 
+	// erodeDilateSequence: 0 -> dilate first, 1 -> erode first
 	if (!arr_val_dv[6]) // 0 -> dilate first
 	{
 		if (arr_val_dv[7] != 0) {
