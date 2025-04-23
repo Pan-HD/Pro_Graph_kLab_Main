@@ -36,12 +36,12 @@
     - マスク抜け - Master Branch
       - ```BcpFiles -> Files_0407_2025 -> ..._v5```
     - Test version extended by Master Branch
-      - ```BcpFiles -> Files_0422_2025 -> ..._v2```
+      - ```BcpFiles -> Files_0422_2025 -> ..._v1```
   - GA
     - マスク抜け - Master Branch
       - ```BcpFiles -> Files_0407_2025 -> ..._v6```
     - Test version extended by Master Branch
-      - ```BcpFiles -> Files_0422_2025 -> ..._v1```
+      - ```BcpFiles -> Files_0422_2025 -> ..._v2```
   - GP
     - Version - 01
       - ```BcpFiles -> Files_0404_2025 -> ..._v1```
