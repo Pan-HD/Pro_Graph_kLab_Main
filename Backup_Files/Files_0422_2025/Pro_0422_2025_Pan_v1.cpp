@@ -11,8 +11,8 @@ using namespace cv;
 // ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal"]
 // ["dilateTimes", "aspectOffset", "contourPixNum"]
 
-int info_val_dv[10] = { 1, 17, 0, 9, 3, 0, 2, 3, 1, 7 }; // bcp of pre, v0
-// int info_val_dv[10] = { 1, 19, 0, 9, 3, 0, 2, 3, 1, 7 }; // res of ga, v1
+// int info_val_dv[10] = { 1, 17, 0, 9, 3, 0, 2, 3, 1, 7 }; // bcp of pre, v0
+int info_val_dv[10] = { 1, 19, 0, 9, 3, 0, 2, 3, 1, 7 }; // res of ga, v1
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -119,10 +119,10 @@ int main(void) {
 
 	for (int idxImg = 0; idxImg < 14; idxImg++) {
 		if (idxImg < 9) {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0422_2025_v1/output_test_v0/resImg_0%d.png", idxImg + 1);
+			sprintf_s(outputPathName_res[idxImg], "./imgs_0422_2025_v1/output_test_v1/resImg_0%d.png", idxImg + 1);
 		}
 		else {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0422_2025_v1/output_test_v0/resImg_%d.png", idxImg + 1);
+			sprintf_s(outputPathName_res[idxImg], "./imgs_0422_2025_v1/output_test_v1/resImg_%d.png", idxImg + 1);
 		}
 		imwrite(outputPathName_res[idxImg], resImg[idxImg]);
 	}
