@@ -8,8 +8,8 @@ using namespace std;
 using namespace cv;
 
 // the name of decision-variables
-// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal"]
-// ["dilateTimes", "aspectOffset", "contourPixNum"]
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "dilateTimes_01", "aspectOffset_01", "contourPixNum_01"]
+// [, "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
 
 // int info_val_dv[10] = { 1, 17, 0, 9, 3, 0, 2, 3, 1, 7 }; // bcp of pre, v0
 int info_val_dv[10] = { 1, 19, 0, 9, 3, 0, 2, 3, 1, 7 }; // res of ga, v1
