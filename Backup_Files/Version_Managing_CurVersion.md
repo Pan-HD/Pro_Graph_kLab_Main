@@ -38,9 +38,9 @@
     - Test version extended by Master Branch
       - ```BcpFiles -> Files_0422_2025 -> ..._v1```
   - GA
-    - マスク抜け - Master Branch
+    - マスク抜け - Master Branch（Version-1.0）
       - ```BcpFiles -> Files_0407_2025 -> ..._v6```
-    - Test version extended by Master Branch
+    - Test version extended by Master Branch（Version-2.0）
       - ```BcpFiles -> Files_0422_2025 -> ..._v2```
   - GP
     - Version - 01
