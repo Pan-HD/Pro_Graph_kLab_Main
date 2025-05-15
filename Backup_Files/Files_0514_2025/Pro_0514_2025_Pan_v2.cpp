@@ -28,7 +28,6 @@ void crossover();
 void mutation();
 void elite_back(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen);
 void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag);
-// void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums);
 void conPro_singleTime(Mat& metaImg, Mat& resImg, int arr_info_cps[]);
 void processOnGenLoop(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen, int flagEB);
 void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]);
@@ -73,7 +72,6 @@ int main(void) {
 	Mat imgArr[numSets][3]; // imgArr -> storing all images 2(2 pairs) * 3(ori, tar, mask)
 	char inputPathName_ori[256];
 	char inputPathName_tar[256];
-	// char inputPathName_mask[256];
 
 	if (numSets == 1) {
 		sprintf_s(inputPathName_ori, "./imgs_0514_2025_v2/input/oriImg_0%d.png", idSet);
@@ -116,7 +114,6 @@ void make()
 {
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
 		for (int idxCh = 0; idxCh < chLen; idxCh++) {
-			// groupChromArr[idxInd][idxCh] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
 			group[idxInd].chrom[idxCh] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
 		}
 	}
@@ -146,13 +143,24 @@ void import_para(int idxInd) {
 	for (int idxDV = 0; idxDV < numDV; idxDV++) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
+
+	info_val_dv[0] = 1;
+
 	if (info_val_dv[1] % 2 == 0) {
 		info_val_dv[1] += 1;
 	}
-	info_val_dv[4] += 2;
 
-	// info_val_dv[1] = groupDvMapArr[idxInd][1] * 2 + 1;
-	// info_val_dv[3] = groupDvMapArr[idxInd][3] * 2 + 1;
+	info_val_dv[2] = 0;
+
+	// info_val_dv[3] = 5;
+
+	info_val_dv[4] += 2;
+	if (info_val_dv[4] > 4) {
+		info_val_dv[4] = 4;
+	}
+
+	info_val_dv[5] = 3;
+
 }
 
 double calculateF1Score(double precision, double recall) {
@@ -354,26 +362,6 @@ void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag) {
 	}
 }
 
-//void contourProcess(Mat& metaImg, Mat& resImg, int aspectRatio, int pixNums) {
-//	vector<vector<Point>> contours;
-//	findContours(metaImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-//	Mat mask = Mat::zeros(metaImg.size(), CV_8UC1);
-//	for (const auto& contour : contours) {
-//		Rect bounding_box = boundingRect(contour);
-//		double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
-//		if ((aspect_ratio <= (1 - aspectRatio * 0.1) || aspect_ratio > (1 + aspectRatio * 0.1)) && cv::contourArea(contour) < pixNums) {
-//			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
-//		}
-//	}
-//	for (int y = 0; y < resImg.rows; y++) {
-//		for (int x = 0; x < resImg.cols; x++) {
-//			if (mask.at<uchar>(y, x) == 255) {
-//				resImg.at<uchar>(y, x) = 255;
-//			}
-//		}
-//	}
-//}
-
 void conPro_singleTime(Mat& metaImg, Mat& resImg, int arr_info_cps[]) {
 	Mat maskImg = metaImg.clone();
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
@@ -412,35 +400,6 @@ void processOnGenLoop(Mat imgArr[][3], Mat resImg[], Mat tarImg[], int numGen, i
 		calculateMetrics(resImg, tarImg, numInd, numGen, flagEB);
 	}
 }
-
-//void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
-//	Mat blurImg;
-//	Mat diffImg;
-//	Mat biImg;
-//	Mat labelImg;
-//	if (arr_val_dv[0]) {
-//		medianBlur(oriImg, blurImg, arr_val_dv[1]);
-//	}
-//	else {
-//		blur(oriImg, blurImg, Size(arr_val_dv[1], arr_val_dv[1]));
-//	}
-//	differenceProcess(blurImg, oriImg, diffImg, arr_val_dv[2]);
-//	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
-//	bitwise_not(biImg, biImg);
-//	Mat maskImg_01 = biImg.clone();
-//	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-//	for (int idxET = 0; idxET < arr_val_dv[4]; idxET++) {
-//		erode(maskImg_01, maskImg_01, kernel);
-//	}
-//	contourProcess(maskImg_01, biImg, arr_val_dv[5], 100 * arr_val_dv[6]);
-//
-//	Mat maskImg_02 = biImg.clone();
-//	for (int idxET = 0; idxET < arr_val_dv[7]; idxET++) {
-//		erode(maskImg_02, maskImg_02, kernel);
-//	}
-//	contourProcess(maskImg_02, biImg, arr_val_dv[8], 100 * arr_val_dv[9]);
-//	resImg = biImg.clone();
-//}
 
 void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 	Mat blurImg;
