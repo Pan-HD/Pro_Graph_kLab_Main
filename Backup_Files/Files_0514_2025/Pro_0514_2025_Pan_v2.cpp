@@ -144,22 +144,22 @@ void import_para(int idxInd) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
 
-	info_val_dv[0] = 1;
+	// info_val_dv[0] = 1;
 
 	if (info_val_dv[1] % 2 == 0) {
 		info_val_dv[1] += 1;
 	}
 
-	info_val_dv[2] = 0;
+	// info_val_dv[2] = 0;
 
 	// info_val_dv[3] = 5;
 
-	info_val_dv[4] += 2;
-	if (info_val_dv[4] > 4) {
-		info_val_dv[4] = 4;
-	}
+	// info_val_dv[4] += 2;
+	// if (info_val_dv[4] > 4) {
+	// 	info_val_dv[4] = 4;
+	// }
 
-	info_val_dv[5] = 3;
+	// info_val_dv[5] = 3;
 
 }
 
@@ -457,67 +457,71 @@ void multiProcess(Mat imgArr[][3]) {
 		return;
 	}
 
-	srand((unsigned)time(NULL));
-	make();
+	for (int idxProTimes = 0; idxProTimes < 20; idxProTimes++) {
+		srand((unsigned)time(NULL));
+		make();
 
-	for (int numGen = 0; numGen < num_gen; numGen++) {
-		cout << "-------generation: " << numGen + 1 << "---------" << endl;
-		processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
+		for (int numGen = 0; numGen < num_gen; numGen++) {
+			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
+			processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
 
-		fitness(numGen);
-		printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
+			fitness(numGen);
+			printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
 
-		// preparing for next generation
-		if (numGen < num_gen - 1) {
-			crossover();
-			mutation();
-			elite_back(imgArr, resImg, tarImg, numGen);
-		}
-	}
-
-	Mat resImg_01;
-	Mat resImg_02;
-	Mat res;
-	for (int idxGen = 0; idxGen < num_gen; idxGen++) {
-		if ((idxGen + 1) % 10 == 0) {
-			if (numSets == 1) {
-				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
-				imwrite(imgName_pro[0], resImg_01);
-				if (idxGen == num_gen - 1) {
-					vector<Mat> images = { resImg_01, imgArr[0][1] };
-					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idSet);
-					imwrite(imgName_final[0], res);
-				}
+			// preparing for next generation
+			if (numGen < num_gen - 1) {
+				crossover();
+				mutation();
+				elite_back(imgArr, resImg, tarImg, numGen);
 			}
-			else {
-				for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-					imwrite(imgName_pro[idxSet], resImg_02);
-					if (idxGen == num_gen - 1) {
-						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idxSet + 1);
-						imwrite(imgName_final[idxSet], res);
+		}
+
+		if (indFvalInfo[curMaxFvalIdx][numSets] > 6.1231) {
+			Mat resImg_01;
+			Mat resImg_02;
+			Mat res;
+			for (int idxGen = 0; idxGen < num_gen; idxGen++) {
+				if ((idxGen + 1) % 10 == 0) {
+					if (numSets == 1) {
+						imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
+						sprintf_s(imgName_pro[0], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+						imwrite(imgName_pro[0], resImg_01);
+						if (idxGen == num_gen - 1) {
+							vector<Mat> images = { resImg_01, imgArr[0][1] };
+							hconcat(images, res);
+							sprintf_s(imgName_final[0], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idSet);
+							imwrite(imgName_final[0], res);
+						}
+					}
+					else {
+						for (int idxSet = 0; idxSet < numSets; idxSet++) {
+							imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
+							sprintf_s(imgName_pro[idxSet], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+							imwrite(imgName_pro[idxSet], resImg_02);
+							if (idxGen == num_gen - 1) {
+								vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+								hconcat(images, res);
+								sprintf_s(imgName_final[idxSet], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idxSet + 1);
+								imwrite(imgName_final[idxSet], res);
+							}
+						}
 					}
 				}
 			}
+			for (int i = 0; i < num_gen; i++) {
+				fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+			}
+			for (int idxDV = 0; idxDV < numDV; idxDV++) {
+				fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
+			}
+			fprintf(fl_params, "\n");
+
+			for (int i = 0; i <= numSets; i++) {
+				fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
+			}
+			fprintf(fl_maxFval, "\n");
 		}
 	}
-	for (int i = 0; i < num_gen; i++) {
-		fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-	}
-	for (int idxDV = 0; idxDV < numDV; idxDV++) {
-		fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
-	}
-	fprintf(fl_params, "\n");
-
-	for (int i = 0; i <= numSets; i++) {
-		fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
-	}
-	fprintf(fl_maxFval, "\n");
 
 	fclose(fl_fValue);
 	fclose(fl_params);
