@@ -7,6 +7,7 @@
 using namespace std;
 using namespace cv;
 
+#define sysRunTimes 3
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 17 // the nums of decision-variables
@@ -50,6 +51,8 @@ typedef struct {
 
 indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
+
+double curThreshFVal = 6.1231;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -144,15 +147,15 @@ void import_para(int idxInd) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
 
-	// info_val_dv[0] = 1;
+	info_val_dv[0] = 1;
 
 	if (info_val_dv[1] % 2 == 0) {
 		info_val_dv[1] += 1;
 	}
 
-	// info_val_dv[2] = 0;
+	info_val_dv[2] = 0;
 
-	// info_val_dv[3] = 5;
+	info_val_dv[3] = 9;
 
 	// info_val_dv[4] += 2;
 	// if (info_val_dv[4] > 4) {
@@ -457,7 +460,7 @@ void multiProcess(Mat imgArr[][3]) {
 		return;
 	}
 
-	for (int idxProTimes = 0; idxProTimes < 20; idxProTimes++) {
+	for (int idxProTimes = 0; idxProTimes < sysRunTimes; idxProTimes++) {
 		srand((unsigned)time(NULL));
 		make();
 
@@ -476,7 +479,7 @@ void multiProcess(Mat imgArr[][3]) {
 			}
 		}
 
-		if (indFvalInfo[curMaxFvalIdx][numSets] > 6.1231) {
+		if (indFvalInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
 			Mat resImg_01;
 			Mat resImg_02;
 			Mat res;
