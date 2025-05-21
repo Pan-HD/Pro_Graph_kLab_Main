@@ -52,7 +52,7 @@ typedef struct {
 indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
-double curThreshFVal = 6.1231;
+double curThreshFVal = 6.00;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -480,6 +480,7 @@ void multiProcess(Mat imgArr[][3]) {
 		}
 
 		if (indFvalInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
+			curThreshFVal = indFvalInfo[curMaxFvalIdx][numSets];
 			Mat resImg_01;
 			Mat resImg_02;
 			Mat res;
