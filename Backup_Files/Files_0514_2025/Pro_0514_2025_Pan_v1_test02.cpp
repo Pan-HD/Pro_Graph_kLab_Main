@@ -18,13 +18,15 @@ using namespace cv;
 // int info_val_dv[10] = { 1, 19, 0, 9, 3, 0, 2, 3, 1, 7 }; // res of ga, v1
 
 // Report Version
-int info_val_dv[17] = { 1, 19, 0, 9, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
+// int info_val_dv[17] = { 1, 19, 0, 9, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
 
 // Test Version - 01 - 6.1231
 // int info_val_dv[17] = { 1, 19, 0, 9, 4, 3, 1, 6, 3, 6, 14, 2, 7, 14, 3, 0, 7 };
 
 // Test Version - 02 - 6.0719
 // int info_val_dv[17] = { 1, 17, 0, 9, 4, 0, 7, 11, 2, 4, 0, 3, 1, 7, 3, 0, 2 };
+
+int info_val_dv[18] = { 1, 19, 0, 9, 3, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -94,29 +96,18 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
 	bitwise_not(biImg, biImg);
 
-	// Testing part
-	//for (int idxCPT = 0; idxCPT < arr_val_dv[4]; idxCPT++) {
-	//	int arr_info_cps[3];
-	//	for (int idxCps = 0; idxCps < 3; idxCps++) {
-	//		arr_info_cps[idxCps] = arr_val_dv[5 + idxCPT * 3 + idxCps];
-	//	}
-	//	conPro_singleTime(biImg, biImg, arr_info_cps);
-	//}
-	//
-
-	// imgShow("res-01", biImg);
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(3, 3));
+	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(arr_val_dv[4], arr_val_dv[4]));
 	morphologyEx(biImg, biImg, MORPH_CLOSE, kernel);
-	// imgShow("res-02", morph);
 
-	int arr_info_cps[3];
-	for (int idxCps = 0; idxCps < 3; idxCps++) {
-		arr_info_cps[idxCps] = arr_val_dv[5 + idxCps];
+	for (int idxCPT = 0; idxCPT < arr_val_dv[5]; idxCPT++) {
+		int arr_info_cps[3];
+		for (int idxCps = 0; idxCps < 3; idxCps++) {
+			arr_info_cps[idxCps] = arr_val_dv[6 + idxCPT * 3 + idxCps];
+		}
+		conPro_singleTime(biImg, biImg, arr_info_cps);
 	}
-	conPro_singleTime(biImg, biImg, arr_info_cps);
 
 	resImg = biImg.clone();
-	// resImg = morph.clone();
 }
 
 //int main(void) {
