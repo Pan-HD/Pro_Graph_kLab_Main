@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 3
+#define sysRunTimes 5
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 17 // the nums of decision-variables
@@ -157,12 +157,12 @@ void import_para(int idxInd) {
 
 	info_val_dv[3] = 9;
 
-	// info_val_dv[4] += 2;
-	// if (info_val_dv[4] > 4) {
-	// 	info_val_dv[4] = 4;
-	// }
+	info_val_dv[4] += 2;
+	if (info_val_dv[4] > 4) {
+		info_val_dv[4] = rand() > ((RAND_MAX + 1) / 2) ? 3 : 4;
+	}
 
-	// info_val_dv[5] = 3;
+	info_val_dv[5] = 3;
 
 }
 

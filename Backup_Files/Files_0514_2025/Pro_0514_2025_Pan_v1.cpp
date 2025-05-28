@@ -24,7 +24,10 @@ using namespace cv;
 // int info_val_dv[17] = { 1, 19, 0, 9, 4, 3, 1, 6, 3, 6, 14, 2, 7, 14, 3, 0, 7 };
 
 // Test Version - 02 - 6.0719
-int info_val_dv[17] = { 1, 17, 0, 9, 4, 0, 7, 11, 2, 4, 0, 3, 1, 7, 3, 0, 2 };
+// int info_val_dv[17] = { 1, 17, 0, 9, 4, 0, 7, 11, 2, 4, 0, 3, 1, 7, 3, 0, 2 };
+
+// Test Version - 03 - 6.1231
+int info_val_dv[17] = { 1, 19, 0, 9, 4, 3, 0, 2, 2, 4, 9, 3, 1, 10, 3, 3, 4 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
