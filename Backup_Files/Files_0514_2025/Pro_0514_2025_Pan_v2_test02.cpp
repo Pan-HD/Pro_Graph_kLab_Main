@@ -52,7 +52,7 @@ typedef struct {
 indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
-double curThreshFVal = 4.00;
+double curThreshFVal = 5.00;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -147,20 +147,21 @@ void import_para(int idxInd) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
 
-	info_val_dv[0] = 1;
-	// info_val_dv[1] = info_val_dv[1] * 2 + 1;
-	info_val_dv[1] = 19;
-	info_val_dv[2] = 0;
-	info_val_dv[3] = 9;
-	// info_val_dv[4] = info_val_dv[4] * 2 + 1;
+	info_val_dv[1] = info_val_dv[1] * 2 + 1;
+	//info_val_dv[4] = info_val_dv[4] * 2 + 1;
+
+	//info_val_dv[0] = 1;
+	//info_val_dv[1] = 19;
+	//info_val_dv[2] = 0;
+	//info_val_dv[3] = 9;
 	info_val_dv[4] = 3;
-	info_val_dv[5] = 2;
-	info_val_dv[6] = 3;
-	info_val_dv[7] = 0;
-	info_val_dv[8] = 2;
-	info_val_dv[9] = 3;
-	info_val_dv[10] = 1;
-	info_val_dv[11] = 7;
+	//info_val_dv[5] = 2;
+	//info_val_dv[6] = 3;
+	//info_val_dv[7] = 0;
+	//info_val_dv[8] = 2;
+	//info_val_dv[9] = 3;
+	//info_val_dv[10] = 1;
+	//info_val_dv[11] = 7;
 }
 
 double calculateF1Score(double precision, double recall) {

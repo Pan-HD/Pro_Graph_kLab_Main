@@ -8,25 +8,20 @@ using namespace std;
 using namespace cv;
 
 // the name of decision-variables
-// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "ConProTimes"]
+// ["filterSwitchFlag", "fsize", "absoluteFlag", "threshVal", "CloKerSize", "ConProTimes"]
 // [, "dilateTimes_01", "aspectOffset_01", "contourPixNum_01"]
 // [, "dilateTimes_02", "aspectOffset_02", "contourPixNum_02"]
 // [, "dilateTimes_03", "aspectOffset_03", "contourPixNum_03"]
 // [, "dilateTimes_04", "aspectOffset_04", "contourPixNum_04"]
 
-// int info_val_dv[10] = { 1, 17, 0, 9, 3, 0, 2, 3, 1, 7 }; // bcp of pre, v0
-// int info_val_dv[10] = { 1, 19, 0, 9, 3, 0, 2, 3, 1, 7 }; // res of ga, v1
-
-// Report Version
-// int info_val_dv[17] = { 1, 19, 0, 9, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
-
-// Test Version - 01 - 6.1231
-// int info_val_dv[17] = { 1, 19, 0, 9, 4, 3, 1, 6, 3, 6, 14, 2, 7, 14, 3, 0, 7 };
-
-// Test Version - 02 - 6.0719
-// int info_val_dv[17] = { 1, 17, 0, 9, 4, 0, 7, 11, 2, 4, 0, 3, 1, 7, 3, 0, 2 };
-
+// val-set_01
 int info_val_dv[18] = { 1, 19, 0, 9, 3, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
+
+// val-set_02 (with bad res)
+// int info_val_dv[18] = { 1, 11, 0, 6, 3, 3, 1, 5, 10, 2, 1, 9, 3, 0, 2, 3, 5, 4 };
+
+// val-set_03 (testing branch)
+// int info_val_dv[18] = { 1, 19, 0, 9, 1, 0, 1, 5, 10, 2, 1, 9, 3, 0, 2, 3, 5, 4 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
