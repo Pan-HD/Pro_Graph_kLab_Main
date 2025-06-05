@@ -53,6 +53,7 @@ indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
 double curThreshFVal = 5.00;
+int isWorked = 0;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -148,14 +149,35 @@ void import_para(int idxInd) {
 	}
 
 	info_val_dv[1] = info_val_dv[1] * 2 + 1;
-	//info_val_dv[4] = info_val_dv[4] * 2 + 1;
+	info_val_dv[4] = info_val_dv[4] * 2 + 1;
+
+	if (!isWorked) {
+		info_val_dv[3] = 13;
+	}
+	else {
+		info_val_dv[0] = 1;
+		info_val_dv[1] = 19;
+		info_val_dv[2] = 0;
+		info_val_dv[3] = 9;
+		info_val_dv[4] = 3;
+		info_val_dv[5] += 1;
+	}
 
 	//info_val_dv[0] = 1;
 	//info_val_dv[1] = 19;
+
+	//if (isWorked) {
+	//	info_val_dv[1] = 19;
+	//	info_val_dv[3] = 9;
+	//}
+
 	//info_val_dv[2] = 0;
 	//info_val_dv[3] = 9;
-	info_val_dv[4] = 3;
+	//info_val_dv[4] = 3;
 	//info_val_dv[5] = 2;
+
+	//info_val_dv[5] += 1;
+
 	//info_val_dv[6] = 3;
 	//info_val_dv[7] = 0;
 	//info_val_dv[8] = 2;
@@ -467,6 +489,11 @@ void multiProcess(Mat imgArr[][3]) {
 		make();
 
 		for (int numGen = 0; numGen < num_gen; numGen++) {
+
+			if (numGen >= 25) {
+				isWorked = 1;
+			}
+
 			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
 			processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
 

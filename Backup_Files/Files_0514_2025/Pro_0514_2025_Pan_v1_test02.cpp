@@ -14,14 +14,8 @@ using namespace cv;
 // [, "dilateTimes_03", "aspectOffset_03", "contourPixNum_03"]
 // [, "dilateTimes_04", "aspectOffset_04", "contourPixNum_04"]
 
-// val-set_01
-int info_val_dv[18] = { 1, 19, 0, 9, 3, 2, 3, 0, 2, 3, 1, 7, 0, 0, 0, 0, 0, 0 };
-
-// val-set_02 (with bad res)
-// int info_val_dv[18] = { 1, 11, 0, 6, 3, 3, 1, 5, 10, 2, 1, 9, 3, 0, 2, 3, 5, 4 };
-
-// val-set_03 (testing branch)
-// int info_val_dv[18] = { 1, 19, 0, 9, 1, 0, 1, 5, 10, 2, 1, 9, 3, 0, 2, 3, 5, 4 };
+// val-set_01 (5.4641)
+int info_val_dv[18] = { 1, 19, 0, 9, 3, 3, 3, 1, 4, 3, 0, 2, 3, 6, 3, 3, 0, 6 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
