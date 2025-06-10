@@ -15,7 +15,9 @@ using namespace cv;
 // [, "dilateTimes_04", "aspectOffset_04", "contourPixNum_04"]
 
 // val-set_01 (5.4641)
-int info_val_dv[18] = { 1, 19, 0, 9, 3, 3, 3, 1, 4, 3, 0, 2, 3, 6, 3, 3, 0, 6 };
+//int info_val_dv[18] = { 1, 19, 0, 9, 3, 3, 3, 1, 4, 3, 0, 2, 3, 6, 3, 3, 0, 6 };
+
+int info_val_dv[18] = { 1, 19, 0, 3, 1, 1, 3, 1, 4, 3, 0, 2, 3, 6, 3, 3, 0, 6 };
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -81,9 +83,13 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 	else {
 		blur(oriImg, blurImg, Size(arr_val_dv[1], arr_val_dv[1]));
 	}
+
 	differenceProcess(blurImg, oriImg, diffImg, arr_val_dv[2]);
 	threshold(diffImg, biImg, arr_val_dv[3], 255, THRESH_BINARY);
 	bitwise_not(biImg, biImg);
+
+	imgShow("res", biImg);
+	// imwrite("./imgs_0514_2025_v1/tarOpt/tarImg_10_half.png", biImg);
 
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(arr_val_dv[4], arr_val_dv[4]));
 	morphologyEx(biImg, biImg, MORPH_CLOSE, kernel);
@@ -95,48 +101,49 @@ void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]) {
 		}
 		conPro_singleTime(biImg, biImg, arr_info_cps);
 	}
+	// imgShow("res", biImg);
 
 	resImg = biImg.clone();
 }
 
-//int main(void) {
-//	Mat oriImg = imread("./imgs_0514_2025_v1/input/oriImg_13.png", IMREAD_GRAYSCALE);
-//	Mat resImg;
-//	// imgShow("ori", oriImg);
-//	imgSingleProcess(oriImg, resImg, info_val_dv);
-//	// imgShow("resImg", resImg);
-//	return 0;
-//}
-
 int main(void) {
-	Mat oriImg[14];
-	Mat resImg[14];
-	char inputPathName_ori[14][256];
-	char outputPathName_res[14][256];
-
-	for (int idxImg = 0; idxImg < 14; idxImg++) {
-		if (idxImg < 9) {
-			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_0%d.png", idxImg + 1);
-		}
-		else {
-			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_%d.png", idxImg + 1);
-		}
-		oriImg[idxImg] = imread(inputPathName_ori[idxImg], 0);
-	}
-
-	for (int idxImg = 0; idxImg < 14; idxImg++) {
-		imgSingleProcess(oriImg[idxImg], resImg[idxImg], info_val_dv);
-	}
-
-	for (int idxImg = 0; idxImg < 14; idxImg++) {
-		if (idxImg < 9) {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_0%d.png", idxImg + 1);
-		}
-		else {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_%d.png", idxImg + 1);
-		}
-		imwrite(outputPathName_res[idxImg], resImg[idxImg]);
-	}
-
+	Mat oriImg = imread("./imgs_0514_2025_v1/input/oriImg_10.png", IMREAD_GRAYSCALE);
+	Mat resImg;
+	imgShow("ori", oriImg);
+	imgSingleProcess(oriImg, resImg, info_val_dv);
+	// imgShow("resImg", resImg);
 	return 0;
 }
+
+//int main(void) {
+//	Mat oriImg[14];
+//	Mat resImg[14];
+//	char inputPathName_ori[14][256];
+//	char outputPathName_res[14][256];
+//
+//	for (int idxImg = 0; idxImg < 14; idxImg++) {
+//		if (idxImg < 9) {
+//			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_0%d.png", idxImg + 1);
+//		}
+//		else {
+//			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_%d.png", idxImg + 1);
+//		}
+//		oriImg[idxImg] = imread(inputPathName_ori[idxImg], 0);
+//	}
+//
+//	for (int idxImg = 0; idxImg < 14; idxImg++) {
+//		imgSingleProcess(oriImg[idxImg], resImg[idxImg], info_val_dv);
+//	}
+//
+//	for (int idxImg = 0; idxImg < 14; idxImg++) {
+//		if (idxImg < 9) {
+//			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_0%d.png", idxImg + 1);
+//		}
+//		else {
+//			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_%d.png", idxImg + 1);
+//		}
+//		imwrite(outputPathName_res[idxImg], resImg[idxImg]);
+//	}
+//
+//	return 0;
+//}
