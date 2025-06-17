@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 5
+#define sysRunTimes 1
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 17 // the nums of decision-variables
@@ -52,7 +52,7 @@ typedef struct {
 indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
-double curThreshFVal = 6.00;
+double curThreshFVal = 3.00;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -77,8 +77,8 @@ int main(void) {
 	char inputPathName_tar[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_0514_2025_v2/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_0514_2025_v2/input/tarImg_0%d.png", idSet);
+		sprintf_s(inputPathName_ori, "./imgs_0617_2025_v0/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_0617_2025_v0/input/tarImg_0%d.png", idSet);
 		for (int j = 0; j < 2; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -90,8 +90,8 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_0514_2025_v2/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_0514_2025_v2/input/tarImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_ori, "./imgs_0617_2025_v0/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_0617_2025_v0/input/tarImg_0%d.png", i + 1);
 			for (int j = 0; j < 2; j++) {
 				if (j == 0) {
 					imgArr[i][j] = imread(inputPathName_ori, 0);
@@ -147,22 +147,22 @@ void import_para(int idxInd) {
 		info_val_dv[idxDV] = groupDvMapArr[idxInd][idxDV];
 	}
 
-	info_val_dv[0] = 1;
+	// info_val_dv[0] = 1;
 
 	if (info_val_dv[1] % 2 == 0) {
 		info_val_dv[1] += 1;
 	}
 
-	info_val_dv[2] = 0;
+	// info_val_dv[2] = 0;
 
-	info_val_dv[3] = 9;
+	// info_val_dv[3] = 9;
 
 	info_val_dv[4] += 2;
 	if (info_val_dv[4] > 4) {
 		info_val_dv[4] = rand() > ((RAND_MAX + 1) / 2) ? 3 : 4;
 	}
 
-	info_val_dv[5] = 3;
+	// info_val_dv[5] = 3;
 
 }
 
@@ -438,7 +438,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of every generation (max, min, ave, dev)
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_0514_2025_v2/output/f_value.txt", "w");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_0617_2025_v0/output/f_value.txt", "w");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -446,7 +446,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the decision varibles
 	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_0514_2025_v2/output/params.txt", "w");
+	errno_t err1 = fopen_s(&fl_params, "./imgs_0617_2025_v0/output/params.txt", "w");
 	if (err1 != 0 || fl_params == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -454,7 +454,7 @@ void multiProcess(Mat imgArr[][3]) {
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0514_2025_v2/output/maxFvalInfo_final.txt", "w");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0617_2025_v0/output/maxFvalInfo_final.txt", "w");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -488,24 +488,24 @@ void multiProcess(Mat imgArr[][3]) {
 				if ((idxGen + 1) % 10 == 0) {
 					if (numSets == 1) {
 						imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-						sprintf_s(imgName_pro[0], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+						sprintf_s(imgName_pro[0], "./imgs_0617_2025_v0/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
 						imwrite(imgName_pro[0], resImg_01);
 						if (idxGen == num_gen - 1) {
 							vector<Mat> images = { resImg_01, imgArr[0][1] };
 							hconcat(images, res);
-							sprintf_s(imgName_final[0], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idSet);
+							sprintf_s(imgName_final[0], "./imgs_0617_2025_v0/output/img_0%d/imgs_final.png", idSet);
 							imwrite(imgName_final[0], res);
 						}
 					}
 					else {
 						for (int idxSet = 0; idxSet < numSets; idxSet++) {
 							imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-							sprintf_s(imgName_pro[idxSet], "./imgs_0514_2025_v2/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+							sprintf_s(imgName_pro[idxSet], "./imgs_0617_2025_v0/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
 							imwrite(imgName_pro[idxSet], resImg_02);
 							if (idxGen == num_gen - 1) {
 								vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
 								hconcat(images, res);
-								sprintf_s(imgName_final[idxSet], "./imgs_0514_2025_v2/output/img_0%d/imgs_final.png", idxSet + 1);
+								sprintf_s(imgName_final[idxSet], "./imgs_0617_2025_v0/output/img_0%d/imgs_final.png", idxSet + 1);
 								imwrite(imgName_final[idxSet], res);
 							}
 						}
