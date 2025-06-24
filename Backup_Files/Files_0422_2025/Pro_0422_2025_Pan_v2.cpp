@@ -7,6 +7,7 @@
 using namespace std;
 using namespace cv;
 
+#define sysRunTimes 5
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 10 // the nums of decision-variables
@@ -51,6 +52,9 @@ typedef struct {
 indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
+double curThreshFVal = 3.00;
+//int isWorked = 0;
+
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
 
@@ -69,7 +73,6 @@ int main(void) {
 	Mat imgArr[numSets][3]; // imgArr -> storing all images 2(2 pairs) * 3(ori, tar, mask)
 	char inputPathName_ori[256];
 	char inputPathName_tar[256];
-	// char inputPathName_mask[256];
 
 	if (numSets == 1) {
 		sprintf_s(inputPathName_ori, "./imgs_0619_2025_v0/input/oriImg_0%d.png", idSet);
@@ -112,7 +115,6 @@ void make()
 {
 	for (int idxInd = 0; idxInd < num_ind; idxInd++) {
 		for (int idxCh = 0; idxCh < chLen; idxCh++) {
-			// groupChromArr[idxInd][idxCh] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
 			group[idxInd].chrom[idxCh] = rand() > ((RAND_MAX + 1) / 2) ? 1 : 0;
 		}
 	}
@@ -439,67 +441,77 @@ void multiProcess(Mat imgArr[][3]) {
 		return;
 	}
 
-	srand((unsigned)time(NULL));
-	make();
+	for (int idxProTimes = 0; idxProTimes < sysRunTimes; idxProTimes++) {
+		srand((unsigned)time(NULL));
+		make();
 
-	for (int numGen = 0; numGen < num_gen; numGen++) {
-		cout << "-------generation: " << numGen + 1 << "---------" << endl;
-		processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
+		for (int numGen = 0; numGen < num_gen; numGen++) {
 
-		fitness(numGen);
-		printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
+			//if (numGen >= 25) {
+			//	isWorked = 1;
+			//}
 
-		// preparing for next generation
-		if (numGen < num_gen - 1) {
-			crossover();
-			mutation();
-			elite_back(imgArr, resImg, tarImg, numGen);
-		}
-	}
+			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
+			processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
 
-	Mat resImg_01;
-	Mat resImg_02;
-	Mat res;
-	for (int idxGen = 0; idxGen < num_gen; idxGen++) {
-		if ((idxGen + 1) % 10 == 0) {
-			if (numSets == 1) {
-				imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
-				sprintf_s(imgName_pro[0], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
-				imwrite(imgName_pro[0], resImg_01);
-				if (idxGen == num_gen - 1) {
-					vector<Mat> images = { resImg_01, imgArr[0][1] };
-					hconcat(images, res);
-					sprintf_s(imgName_final[0], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idSet);
-					imwrite(imgName_final[0], res);
-				}
+			fitness(numGen);
+			printf("f_value: %.4f\n", genInfo[numGen].eliteFValue);
+
+			// preparing for next generation
+			if (numGen < num_gen - 1) {
+				crossover();
+				mutation();
+				elite_back(imgArr, resImg, tarImg, numGen);
 			}
-			else {
-				for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-					imwrite(imgName_pro[idxSet], resImg_02);
-					if (idxGen == num_gen - 1) {
-						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idxSet + 1);
-						imwrite(imgName_final[idxSet], res);
+		}
+
+		if (indFvalInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
+			curThreshFVal = indFvalInfo[curMaxFvalIdx][numSets];
+			Mat resImg_01;
+			Mat resImg_02;
+			Mat res;
+			for (int idxGen = 0; idxGen < num_gen; idxGen++) {
+				if ((idxGen + 1) % 10 == 0) {
+					if (numSets == 1) {
+						imgSingleProcess(imgArr[0][0], resImg_01, genInfo[idxGen].arr_val_dv);
+						sprintf_s(imgName_pro[0], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idSet, idxGen + 1);
+						imwrite(imgName_pro[0], resImg_01);
+						if (idxGen == num_gen - 1) {
+							vector<Mat> images = { resImg_01, imgArr[0][1] };
+							hconcat(images, res);
+							sprintf_s(imgName_final[0], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idSet);
+							imwrite(imgName_final[0], res);
+						}
+					}
+					else {
+						for (int idxSet = 0; idxSet < numSets; idxSet++) {
+							imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
+							sprintf_s(imgName_pro[idxSet], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+							imwrite(imgName_pro[idxSet], resImg_02);
+							if (idxGen == num_gen - 1) {
+								vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+								hconcat(images, res);
+								sprintf_s(imgName_final[idxSet], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idxSet + 1);
+								imwrite(imgName_final[idxSet], res);
+							}
+						}
 					}
 				}
 			}
+			for (int i = 0; i < num_gen; i++) {
+				fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+			}
+			for (int idxDV = 0; idxDV < numDV; idxDV++) {
+				fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
+			}
+			fprintf(fl_params, "\n");
+
+			for (int i = 0; i <= numSets; i++) {
+				fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
+			}
+			fprintf(fl_maxFval, "\n");
 		}
 	}
-	for (int i = 0; i < num_gen; i++) {
-		fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-	}
-	for (int idxDV = 0; idxDV < numDV; idxDV++) {
-		fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
-	}
-	fprintf(fl_params, "\n");
-
-	for (int i = 0; i <= numSets; i++) {
-		fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
-	}
-	fprintf(fl_maxFval, "\n");
 
 	fclose(fl_fValue);
 	fclose(fl_params);
