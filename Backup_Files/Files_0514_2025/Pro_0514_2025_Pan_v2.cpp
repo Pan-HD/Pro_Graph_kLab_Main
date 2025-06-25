@@ -7,7 +7,7 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 1
+#define sysRunTimes 5
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define numDV 17 // the nums of decision-variables
@@ -53,6 +53,7 @@ indInfoType group[num_ind];
 genInfoType genInfo[num_gen];
 
 double curThreshFVal = 3.00;
+//int isWorked = 0;
 
 // for storing the index of the individual with max f-value
 int curMaxFvalIdx = 0;
@@ -465,6 +466,11 @@ void multiProcess(Mat imgArr[][3]) {
 		make();
 
 		for (int numGen = 0; numGen < num_gen; numGen++) {
+
+			//if (numGen >= 25) {
+			//	isWorked = 1;
+			//}
+
 			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
 			processOnGenLoop(imgArr, resImg, tarImg, numGen, 0);
 
