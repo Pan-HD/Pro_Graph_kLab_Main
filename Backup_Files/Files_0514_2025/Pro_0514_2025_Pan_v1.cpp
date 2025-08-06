@@ -30,7 +30,9 @@ using namespace cv;
 // int info_val_dv[17] = { 1, 19, 0, 9, 4, 3, 0, 2, 2, 4, 9, 3, 1, 10, 3, 3, 4 };
 
 // Test Version - 04 - 6.1231
-int info_val_dv[17] = { 1, 19, 0, 9, 3, 3, 1, 9, 3, 0, 2, 2, 2, 0, 3, 2, 0 };
+// int info_val_dv[17] = { 1, 19, 0, 9, 3, 3, 1, 9, 3, 0, 2, 2, 2, 0, 3, 2, 0 };
+
+int info_val_dv[17] = { 1, 25, 0, 10, 3, 2, 6, 14, 0, 6, 7, 2, 6, 4, 2, 2, 5 }; // Opt of GA for Rep on 0806
 
 void imgShow(const string& name, const Mat& img) {
 	imshow(name, img);
@@ -127,10 +129,10 @@ int main(void) {
 
 	for (int idxImg = 0; idxImg < 14; idxImg++) {
 		if (idxImg < 9) {
-			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_0%d.png", idxImg + 1);
+			sprintf_s(inputPathName_ori[idxImg], "./imgs_0806_2025_v0_test/input/oriImg_0%d.png", idxImg + 1);
 		}
 		else {
-			sprintf_s(inputPathName_ori[idxImg], "./imgs_0514_2025_v1/input/oriImg_%d.png", idxImg + 1);
+			sprintf_s(inputPathName_ori[idxImg], "./imgs_0806_2025_v0_test/input/oriImg_%d.png", idxImg + 1);
 		}
 		oriImg[idxImg] = imread(inputPathName_ori[idxImg], 0);
 	}
@@ -141,10 +143,10 @@ int main(void) {
 
 	for (int idxImg = 0; idxImg < 14; idxImg++) {
 		if (idxImg < 9) {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_0%d.png", idxImg + 1);
+			sprintf_s(outputPathName_res[idxImg], "./imgs_0806_2025_v0_test/output/Ver03/resImg_0%d.png", idxImg + 1);
 		}
 		else {
-			sprintf_s(outputPathName_res[idxImg], "./imgs_0514_2025_v1/output_test_v1/resImg_%d.png", idxImg + 1);
+			sprintf_s(outputPathName_res[idxImg], "./imgs_0806_2025_v0_test/output/Ver03/resImg_%d.png", idxImg + 1);
 		}
 		imwrite(outputPathName_res[idxImg], resImg[idxImg]);
 	}
