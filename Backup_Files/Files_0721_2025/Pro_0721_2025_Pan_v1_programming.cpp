@@ -15,19 +15,15 @@ using namespace cv;
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 20
-#define GENERATIONS 1000
+#define GENERATIONS 3 // ori: 1000
 #define OFFSPRING_COUNT 10
 #define MUTATION_RATE 0.9
+#define NUM_TYPE_FUNC 7
 
-void imgShow(const string& name, const Mat& img);
-double calculateF1Score(double precision, double recall);
-double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]);
-void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag);
-void conPro_singleTime(Mat& metaImg, Mat& resImg, int arr_info_cps[]);
-void imgSingleProcess(Mat& oriImg, Mat& resImg, int arr_val_dv[]);
+// void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
 
-enum FilterType {
+enum FilterType { // type-terminal and type-function
 	TERMINAL_INPUT,
 	BLUR,
 	MED_BLUR,
@@ -40,7 +36,7 @@ enum FilterType {
 
 struct TreeNode {
 	FilterType type;
-	vector<shared_ptr<TreeNode>> children;
+	vector<shared_ptr<TreeNode>> children; // Array of Children
 };
 
 int main(void) {
@@ -94,7 +90,7 @@ shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = 4) {
 		return make_shared<TreeNode>(TreeNode{ TERMINAL_INPUT, {} });
 	}
 
-	FilterType t = static_cast<FilterType>(1 + (rng() % 3));
+	FilterType t = static_cast<FilterType>(1 + (rng() % NUM_TYPE_FUNC));
 	auto node = make_shared<TreeNode>(TreeNode{ t, {} });
 
 	int numChildren = (t == DIFF_PROCESS ? 2 : 1);
@@ -211,7 +207,7 @@ Mat conPro_singleTime(const Mat& img) {
 	return out;
 }
 
-Mat executeTree(const shared_ptr<TreeNode>& node, Mat& input) {
+Mat executeTree(const shared_ptr<TreeNode>& node, Mat& input) { // ind-tree, img
 	switch (node->type) {
 	case TERMINAL_INPUT:
 		return input.clone();
@@ -333,10 +329,6 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 	}
 	double sum_f1 = 0.0;
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
-		// if cur gen is the last gen, then writting the detail-info into the indFvalInfo-arr
-		//if (numGen == num_gen - 1) {
-		//	indFvalInfo[numInd][idxSet] = f1_score[idxSet];
-		//}
 		sum_f1 += f1_score[idxSet];
 	}
 	return sum_f1;
@@ -389,9 +381,6 @@ void multiProcess(Mat imgArr[][2]) {
 		shared_ptr<TreeNode> best;
 		double bestFitness = -1;
 
-		//srand((unsigned)time(NULL));
-		//make();
-
 		for (int numGen = 0; numGen < GENERATIONS; numGen++) {
 			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
 			int idx1 = rng() % POP_SIZE;
@@ -409,59 +398,61 @@ void multiProcess(Mat imgArr[][2]) {
 
 			for (int i = 0; i < numSets; i++) {
 				resImg[i] = executeTree(parent1, imgArr[i][0]);
+				imgShow("res", resImg[i]);
 			}
 			double score1 = calculateMetrics(resImg, tarImg);
+			// printf("gen: %d, score of the ind: %.4f\n", numGen + 1, score1);
 
-			for (int i = 0; i < numSets; i++) {
-				resImg[i] = executeTree(parent2, imgArr[i][0]);
-			}
-			double score2 = calculateMetrics(resImg, tarImg);
+			//for (int i = 0; i < numSets; i++) {
+			//	resImg[i] = executeTree(parent2, imgArr[i][0]);
+			//}
+			//double score2 = calculateMetrics(resImg, tarImg);
 
-			family.push_back({ score1, parent1 });
-			family.push_back({ score2, parent2 });
+			//family.push_back({ score1, parent1 });
+			//family.push_back({ score2, parent2 });
 
-			for (int k = 0; k < OFFSPRING_COUNT; ++k) {
-				auto childA = cloneTree(parent1);
-				auto childB = cloneTree(parent2);
-				crossover(childA, childB);
+			//for (int k = 0; k < OFFSPRING_COUNT; ++k) {
+			//	auto childA = cloneTree(parent1);
+			//	auto childB = cloneTree(parent2);
+			//	crossover(childA, childB);
 
-				if (prob(rng) < MUTATION_RATE) mutate(childA);
-				if (prob(rng) < MUTATION_RATE) mutate(childB);
+			//	if (prob(rng) < MUTATION_RATE) mutate(childA);
+			//	if (prob(rng) < MUTATION_RATE) mutate(childB);
 
-				auto chosen = (prob(rng) < 0.5) ? childA : childB;
+			//	auto chosen = (prob(rng) < 0.5) ? childA : childB;
 
-				for (int i = 0; i < numSets; i++) {
-					resImg[i] = executeTree(chosen, imgArr[i][0]);
-				}
-				double fit = calculateMetrics(resImg, tarImg);
-				family.push_back({ fit, chosen });
-			}
+			//	for (int i = 0; i < numSets; i++) {
+			//		resImg[i] = executeTree(chosen, imgArr[i][0]);
+			//	}
+			//	double fit = calculateMetrics(resImg, tarImg);
+			//	family.push_back({ fit, chosen });
+			//}
 
 
-			for (const auto& f : family) {
+			//for (const auto& f : family) {
 
-				if (f.first > bestFitness) {
-					bestFitness = f.first;
-					best = cloneTree(f.second);
-					cout << "[Gen " << numGen << "] 最佳适应度: " << bestFitness << endl;
-				}
+			//	if (f.first > bestFitness) {
+			//		bestFitness = f.first;
+			//		best = cloneTree(f.second);
+			//		cout << "[Gen " << numGen << "] 最佳适应度: " << bestFitness << endl;
+			//	}
 
-			}
-			sort(family.rbegin(), family.rend());
-			auto elite = family[0];
-			double total = 0;
-			for (const auto& f : family) total += f.first;
-			double r = prob(rng) * total, accum = 0;
-			shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
-			for (const auto& f : family) {
-				accum += f.first;
-				if (accum >= r) {
-					rouletteSelected = f.second;
-					break;
-				}
-			}
-			population[idx1] = cloneTree(elite.second);
-			population[idx2] = cloneTree(rouletteSelected);
+			//}
+			//sort(family.rbegin(), family.rend());
+			//auto elite = family[0];
+			//double total = 0;
+			//for (const auto& f : family) total += f.first;
+			//double r = prob(rng) * total, accum = 0;
+			//shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
+			//for (const auto& f : family) {
+			//	accum += f.first;
+			//	if (accum >= r) {
+			//		rouletteSelected = f.second;
+			//		break;
+			//	}
+			//}
+			//population[idx1] = cloneTree(elite.second);
+			//population[idx2] = cloneTree(rouletteSelected);
 		}
 		printf("--------END--------------\n");
 	}
