@@ -20,7 +20,7 @@ using namespace cv;
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 7
 
-// void imgShow(const string& name, const Mat& img);
+void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
 
 enum FilterType { // type-terminal and type-function
@@ -263,7 +263,7 @@ void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
 	for (const auto& np : nodesB) {
 		if (np.second) validB.push_back(np);
 	}
-
+	// Crossover only works on the situation: except root node, any child node exists.
 	if (validA.empty() || validB.empty()) return;
 
 	int idxA = rng() % validA.size();
@@ -340,6 +340,21 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 //	return dist(rng) < p;
 //}
 
+double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2]) {
+	Mat tarImg[numSets];
+	Mat resImg[numSets];
+
+	for (int i = 0; i < numSets; i++) {
+		tarImg[i] = imgArr[i][1];
+	}
+
+	for (int i = 0; i < numSets; i++) {
+		resImg[i] = executeTree(node, imgArr[i][0]);
+		// imgShow("res", resImg[i]);
+	}
+	return calculateMetrics(resImg, tarImg);
+}
+
 void multiProcess(Mat imgArr[][2]) {
 	Mat resImg[numSets];
 	Mat tarImg[numSets];
@@ -392,41 +407,32 @@ void multiProcess(Mat imgArr[][2]) {
 
 			vector<pair<double, shared_ptr<TreeNode>>> family;
 
-			for (int i = 0; i < numSets; i++) {
-				tarImg[i] = imgArr[i][1];
-			}
-
-			for (int i = 0; i < numSets; i++) {
-				resImg[i] = executeTree(parent1, imgArr[i][0]);
-				imgShow("res", resImg[i]);
-			}
-			double score1 = calculateMetrics(resImg, tarImg);
+			double score1 = calScoreByInd(parent1, imgArr);
+			double score2 = calScoreByInd(parent2, imgArr);
 			// printf("gen: %d, score of the ind: %.4f\n", numGen + 1, score1);
 
-			//for (int i = 0; i < numSets; i++) {
-			//	resImg[i] = executeTree(parent2, imgArr[i][0]);
-			//}
-			//double score2 = calculateMetrics(resImg, tarImg);
+			family.push_back({ score1, parent1 });
+			family.push_back({ score2, parent2 });
 
-			//family.push_back({ score1, parent1 });
-			//family.push_back({ score2, parent2 });
+			for (int k = 0; k < OFFSPRING_COUNT; ++k) {
+				auto childA = cloneTree(parent1);
+				auto childB = cloneTree(parent2);
+				crossover(childA, childB);
 
-			//for (int k = 0; k < OFFSPRING_COUNT; ++k) {
-			//	auto childA = cloneTree(parent1);
-			//	auto childB = cloneTree(parent2);
-			//	crossover(childA, childB);
+				if (prob(rng) < MUTATION_RATE) mutate(childA);
+				if (prob(rng) < MUTATION_RATE) mutate(childB);
 
-			//	if (prob(rng) < MUTATION_RATE) mutate(childA);
-			//	if (prob(rng) < MUTATION_RATE) mutate(childB);
+				auto chosen = (prob(rng) < 0.5) ? childA : childB;
 
-			//	auto chosen = (prob(rng) < 0.5) ? childA : childB;
+				double fit = calScoreByInd(chosen, imgArr);
 
-			//	for (int i = 0; i < numSets; i++) {
-			//		resImg[i] = executeTree(chosen, imgArr[i][0]);
-			//	}
-			//	double fit = calculateMetrics(resImg, tarImg);
-			//	family.push_back({ fit, chosen });
-			//}
+				//for (int i = 0; i < numSets; i++) {
+				//	resImg[i] = executeTree(chosen, imgArr[i][0]);
+				//}
+				//double fit = calculateMetrics(resImg, tarImg);
+
+				family.push_back({ fit, chosen });
+			}
 
 
 			//for (const auto& f : family) {
