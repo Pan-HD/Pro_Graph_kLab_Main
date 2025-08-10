@@ -15,7 +15,7 @@ using namespace cv;
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 20
-#define GENERATIONS 3 // ori: 1000
+#define GENERATIONS 1000 // ori: 1000
 #define OFFSPRING_COUNT 10
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 7
@@ -38,6 +38,8 @@ struct TreeNode {
 	FilterType type;
 	vector<shared_ptr<TreeNode>> children; // Array of Children
 };
+
+vector<pair<double, shared_ptr<TreeNode>>> genInfo;
 
 int main(void) {
 	Mat imgArr[numSets][2]; // imgArr -> storing all images numSets(numSets pairs) * 2(ori, tar)
@@ -121,25 +123,6 @@ Mat medBlurFunc(const Mat& img) {
 	return out;
 }
 
-void differenceProcess(Mat postImg, Mat preImg, Mat& resImg, int absoluteFlag) {
-	resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
-	for (int j = 0; j < postImg.rows; j++)
-	{
-		for (int i = 0; i < postImg.cols; i++) {
-			int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
-			if (diffVal < 0) {
-				if (absoluteFlag != 0) {
-					diffVal = abs(diffVal);
-				}
-				else {
-					diffVal = 0;
-				}
-			}
-			resImg.at<uchar>(j, i) = diffVal;
-		}
-	}
-}
-
 Mat diffProcess(const Mat postImg, const Mat preImg) {
 	int absoluteFlag = 0;
 	Mat resImg = Mat::zeros(Size(postImg.cols, postImg.rows), CV_8UC1);
@@ -181,7 +164,7 @@ Mat morphFunc(const Mat& img) {
 }
 
 Mat conPro_singleTime(const Mat& img) {
-	Mat out;
+	Mat out = Mat::zeros(img.size(), CV_8UC1);
 	Mat maskImg = img.clone();
 	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
 	for (int idxET = 0; idxET < 3; idxET++) {
@@ -334,12 +317,6 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 	return sum_f1;
 }
 
-//bool coin(double p) {
-//	static uniform_real_distribution<> dist(0.0, 1.0);
-//	static mt19937 rng(random_device{}());
-//	return dist(rng) < p;
-//}
-
 double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2]) {
 	Mat tarImg[numSets];
 	Mat resImg[numSets];
@@ -394,6 +371,7 @@ void multiProcess(Mat imgArr[][2]) {
 		}
 
 		shared_ptr<TreeNode> best;
+		int idxBest = 0;
 		double bestFitness = -1;
 
 		for (int numGen = 0; numGen < GENERATIONS; numGen++) {
@@ -418,49 +396,80 @@ void multiProcess(Mat imgArr[][2]) {
 				auto childA = cloneTree(parent1);
 				auto childB = cloneTree(parent2);
 				crossover(childA, childB);
-
-				if (prob(rng) < MUTATION_RATE) mutate(childA);
-				if (prob(rng) < MUTATION_RATE) mutate(childB);
-
 				auto chosen = (prob(rng) < 0.5) ? childA : childB;
-
 				double fit = calScoreByInd(chosen, imgArr);
-
-				//for (int i = 0; i < numSets; i++) {
-				//	resImg[i] = executeTree(chosen, imgArr[i][0]);
-				//}
-				//double fit = calculateMetrics(resImg, tarImg);
-
 				family.push_back({ fit, chosen });
 			}
 
+			for (int idxInd = 0; idxInd < (OFFSPRING_COUNT + 2); idxInd++) {
+				if (prob(rng) < MUTATION_RATE) {
+					mutate(family[idxInd].second);
+					family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr);
+				}
+			}
 
-			//for (const auto& f : family) {
+			for (const auto& f : family) {
+				if (f.first > bestFitness) {
+					bestFitness = f.first;
+					best = cloneTree(f.second);
+				}
+			}
 
-			//	if (f.first > bestFitness) {
-			//		bestFitness = f.first;
-			//		best = cloneTree(f.second);
-			//		cout << "[Gen " << numGen << "] 最佳适应度: " << bestFitness << endl;
-			//	}
+			sort(family.rbegin(), family.rend()); // descending sort by f1_score(ind.first)
+			auto elite = family[0];
+			double total = 0;
+			for (const auto& f : family) total += f.first;
+			double r = prob(rng) * total, accum = 0;
+			shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
+			for (const auto& f : family) {
+				accum += f.first;
+				if (accum >= r) {
+					rouletteSelected = f.second;
+					break;
+				}
+			}
+			population[idx1] = cloneTree(elite.second);
+			population[idx2] = cloneTree(rouletteSelected);
 
-			//}
-			//sort(family.rbegin(), family.rend());
-			//auto elite = family[0];
-			//double total = 0;
-			//for (const auto& f : family) total += f.first;
-			//double r = prob(rng) * total, accum = 0;
-			//shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
-			//for (const auto& f : family) {
-			//	accum += f.first;
-			//	if (accum >= r) {
-			//		rouletteSelected = f.second;
-			//		break;
-			//	}
-			//}
-			//population[idx1] = cloneTree(elite.second);
-			//population[idx2] = cloneTree(rouletteSelected);
+			printf("the score of elite(%d gen): %.4f", numGen + 1, calScoreByInd(population[idx1], imgArr));
+			if (numGen == GENERATIONS - 1) {
+				idxBest = idx1;
+			}
 		}
-		printf("--------END--------------\n");
+		printf("---------------- GEN-END --------------\n");
+		printf("the score of elite(last gen): %.4f", calScoreByInd(population[idxBest], imgArr));
+
+		//Mat resImg_01;
+		//Mat resImg_02;
+		//Mat res;
+		//for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
+		//	if ((idxGen + 1) % 10 == 0) {
+		//		for (int idxSet = 0; idxSet < numSets; idxSet++) {
+		//			imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
+		//			sprintf_s(imgName_pro[idxSet], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+		//			imwrite(imgName_pro[idxSet], resImg_02);
+		//			if (idxGen == num_gen - 1) {
+		//				vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+		//				hconcat(images, res);
+		//				sprintf_s(imgName_final[idxSet], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idxSet + 1);
+		//				imwrite(imgName_final[idxSet], res);
+		//			}
+		//		}
+		//	}
+		//}
+		//for (int i = 0; i < num_gen; i++) {
+		//	fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+		//}
+		//for (int idxDV = 0; idxDV < numDV; idxDV++) {
+		//	fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
+		//}
+		//fprintf(fl_params, "\n");
+
+		//for (int i = 0; i <= numSets; i++) {
+		//	fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
+		//}
+		//fprintf(fl_maxFval, "\n");
+
 	}
 
 	fclose(fl_fValue);
