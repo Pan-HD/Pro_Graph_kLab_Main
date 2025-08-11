@@ -15,7 +15,7 @@ using namespace cv;
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 20
-#define GENERATIONS 1000 // ori: 1000
+#define GENERATIONS 100 // ori: 1000
 #define OFFSPRING_COUNT 10
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 7
@@ -39,7 +39,19 @@ struct TreeNode {
 	vector<shared_ptr<TreeNode>> children; // Array of Children
 };
 
-vector<pair<double, shared_ptr<TreeNode>>> genInfo;
+struct genType {
+	shared_ptr<TreeNode> eliteTree;
+	double eliteFValue;
+	double genMinFValue;
+	double genAveFValue;
+	double genDevFValue;
+};
+
+vector<genType> genInfo;
+
+// for storing the f-value of every individual in the group
+double indFValInfo[POP_SIZE][numSets + 1];
+int indFValFlag = 0;
 
 int main(void) {
 	Mat imgArr[numSets][2]; // imgArr -> storing all images numSets(numSets pairs) * 2(ori, tar)
@@ -312,9 +324,34 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 	}
 	double sum_f1 = 0.0;
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
+		//if (indFValFlag) {
+		//	indFValInfo[numInd][idxSet] = f1_score[idxSet];
+		//}
 		sum_f1 += f1_score[idxSet];
 	}
 	return sum_f1;
+
+	//double sum_f1 = 0.0;
+	//for (int idxSet = 0; idxSet < numSets; idxSet++) {
+	//	// if cur gen is the last gen, then writting the detail-info into the indFvalInfo-arr
+	//	if (numGen == num_gen - 1) {
+	//		indFvalInfo[numInd][idxSet] = f1_score[idxSet];
+	//	}
+	//	sum_f1 += f1_score[idxSet];
+	//}
+	//group[numInd].f_value = sum_f1;
+
+	//if (numGen == num_gen - 1) {
+	//	// if cur gen is the last gen, then writting the detail-info into the indFvalInfo-arr
+	//	indFvalInfo[numInd][numSets] = sum_f1;
+	//}
+
+	//// flagEB: the flag of elite-back (func been called in the elite-back)
+	//if (flagEB) {
+	//	for (int idxDV = 0; idxDV < numDV; idxDV++) {
+	//		groupDvInfoArr[numInd][idxDV] = info_val_dv[idxDV];
+	//	}
+	//}
 }
 
 double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2]) {
@@ -348,12 +385,12 @@ void multiProcess(Mat imgArr[][2]) {
 	}
 
 	// for recording the decision varibles
-	FILE* fl_params = nullptr;
-	errno_t err1 = fopen_s(&fl_params, "./imgs_0721_2025_v1/output/params.txt", "w");
-	if (err1 != 0 || fl_params == nullptr) {
-		perror("Cannot open the file");
-		return;
-	}
+	//FILE* fl_params = nullptr;
+	//errno_t err1 = fopen_s(&fl_params, "./imgs_0721_2025_v1/output/params.txt", "w");
+	//if (err1 != 0 || fl_params == nullptr) {
+	//	perror("Cannot open the file");
+	//	return;
+	//}
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
@@ -431,35 +468,52 @@ void multiProcess(Mat imgArr[][2]) {
 			population[idx1] = cloneTree(elite.second);
 			population[idx2] = cloneTree(rouletteSelected);
 
-			printf("the score of elite(%d gen): %.4f", numGen + 1, calScoreByInd(population[idx1], imgArr));
+			double eliScore = calScoreByInd(population[idx1], imgArr);
+
+			// genInfo.push_back({ eliScore, population[idx1] });
+
+			printf("the score of elite(%d gen): %.4f", numGen + 1, eliScore);
 			if (numGen == GENERATIONS - 1) {
 				idxBest = idx1;
+				for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
+					calScoreByInd(population[idxInd], imgArr);
+
+					//for (int idxSet = 0; idxSet < numSets; idxSet++) {
+					//	calScoreByInd(population[idxInd], imgArr);
+					//	// indFValInfo[idxInd][idxSet] = population[idxInd]
+					//}
+				}
 			}
 		}
 		printf("---------------- GEN-END --------------\n");
+
+		indFValFlag = 1;
 		printf("the score of elite(last gen): %.4f", calScoreByInd(population[idxBest], imgArr));
 
-		//Mat resImg_01;
-		//Mat resImg_02;
-		//Mat res;
-		//for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-		//	if ((idxGen + 1) % 10 == 0) {
-		//		for (int idxSet = 0; idxSet < numSets; idxSet++) {
-		//			imgSingleProcess(imgArr[idxSet][0], resImg_02, genInfo[idxGen].arr_val_dv);
-		//			sprintf_s(imgName_pro[idxSet], "./imgs_0619_2025_v0/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-		//			imwrite(imgName_pro[idxSet], resImg_02);
-		//			if (idxGen == num_gen - 1) {
-		//				vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-		//				hconcat(images, res);
-		//				sprintf_s(imgName_final[idxSet], "./imgs_0619_2025_v0/output/img_0%d/imgs_final.png", idxSet + 1);
-		//				imwrite(imgName_final[idxSet], res);
-		//			}
-		//		}
-		//	}
-		//}
-		//for (int i = 0; i < num_gen; i++) {
-		//	fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-		//}
+		Mat resImg_01;
+		Mat resImg_02;
+		Mat res;
+		for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
+			if ((idxGen + 1) % 10 == 0) {
+				for (int idxSet = 0; idxSet < numSets; idxSet++) {
+					resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
+					sprintf_s(imgName_pro[idxSet], "./imgs_0721_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+					imwrite(imgName_pro[idxSet], resImg_02);
+					if (idxGen == GENERATIONS - 1) {
+						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+						hconcat(images, res);
+						sprintf_s(imgName_final[idxSet], "./imgs_0721_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
+						imwrite(imgName_final[idxSet], res);
+					}
+				}
+			}
+		}
+
+
+
+		for (int i = 0; i < GENERATIONS; i++) {
+			fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+		}
 		//for (int idxDV = 0; idxDV < numDV; idxDV++) {
 		//	fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
 		//}
@@ -473,6 +527,6 @@ void multiProcess(Mat imgArr[][2]) {
 	}
 
 	fclose(fl_fValue);
-	fclose(fl_params);
+	// fclose(fl_params);
 	fclose(fl_maxFval);
 }
