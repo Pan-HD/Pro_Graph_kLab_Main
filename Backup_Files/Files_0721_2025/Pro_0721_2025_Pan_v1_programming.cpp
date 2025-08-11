@@ -52,6 +52,7 @@ vector<genType> genInfo;
 // for storing the f-value of every individual in the group
 double indFValInfo[POP_SIZE][numSets + 1];
 int indFValFlag = 0;
+int curMaxFvalIdx = 0;
 
 int main(void) {
 	Mat imgArr[numSets][2]; // imgArr -> storing all images numSets(numSets pairs) * 2(ori, tar)
@@ -298,7 +299,7 @@ double calculateF1Score(double precision, double recall) {
 }
 
 // for calculating the fValue of the ind and writting the organized info into group-arr and groupDvInfoArr
-double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
+double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], int numInd) {
 	double f1_score[numSets];
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
 		int tp = 0, fp = 0, fn = 0;
@@ -324,11 +325,16 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 	}
 	double sum_f1 = 0.0;
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
-		//if (indFValFlag) {
-		//	indFValInfo[numInd][idxSet] = f1_score[idxSet];
-		//}
+		if (indFValFlag) { // in the last generation
+			indFValInfo[numInd][idxSet] = f1_score[idxSet];
+		}
 		sum_f1 += f1_score[idxSet];
 	}
+
+	if (indFValFlag) {
+		indFValInfo[numInd][numSets] = sum_f1;
+	}
+
 	return sum_f1;
 
 	//double sum_f1 = 0.0;
@@ -354,7 +360,7 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[]) {
 	//}
 }
 
-double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2]) {
+double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2], int numInd) {
 	Mat tarImg[numSets];
 	Mat resImg[numSets];
 
@@ -366,7 +372,79 @@ double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2]) {
 		resImg[i] = executeTree(node, imgArr[i][0]);
 		// imgShow("res", resImg[i]);
 	}
-	return calculateMetrics(resImg, tarImg);
+	return calculateMetrics(resImg, tarImg, numInd);
+}
+
+genType getCurGenInfo(vector<shared_ptr<TreeNode>>& population, Mat imgArr[][2]) {
+
+	int i = 0, j = 0;
+	double firstScore = calScoreByInd(population[0], imgArr, -1);
+	double minFValue = firstScore;
+	double maxFValue = firstScore;
+	double aveFValue = 0.0;
+	double deviation = 0.0;
+	double variance = 0.0;
+	double sumFValue = 0.0;
+
+	vector<double> scoreArr;
+	double tempFValue = 0.0;
+
+	genType curGenInfo;
+
+	printf("\nTEST-01\n");
+	for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
+		scoreArr[idxInd] = calScoreByInd(population[idxInd], imgArr, -1);
+		printf("\nTEST-02\n");
+	}
+
+
+	// for getting maxFValue, curMaxFvalIdx, minFValue, sumFValue in cur generation
+	for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
+		tempFValue = scoreArr[idxInd];
+		sumFValue += tempFValue;
+		if (tempFValue > maxFValue) {
+			maxFValue = tempFValue;
+			curMaxFvalIdx = idxInd;
+		}
+		if (tempFValue < minFValue) {
+			minFValue = tempFValue;
+		}
+	}
+
+	curGenInfo.eliteTree = cloneTree(population[curMaxFvalIdx]);
+	curGenInfo.eliteFValue = maxFValue;
+	aveFValue = sumFValue / POP_SIZE;
+	curGenInfo.genMinFValue = minFValue;
+	curGenInfo.genAveFValue = aveFValue;
+	for (int idxInd = 0; idxInd < POP_SIZE; idxInd++)
+	{
+		double diff = scoreArr[idxInd] - aveFValue;
+		variance += diff * diff;
+	}
+	deviation = sqrt(variance / POP_SIZE);
+	curGenInfo.genDevFValue = deviation;
+
+	return curGenInfo;
+
+	// for writting the info of cur generation to the genInfo-arr
+	// genInfo[numGen].eliteFValue = maxFValue;
+	//for (int idxCh = 0; idxCh < chLen; idxCh++) {
+	//	genInfo[numGen].eliteChrom[idxCh] = group[curMaxFvalIdx].chrom[idxCh];
+	//}
+	// aveFValue = sumFValue / num_ind;
+	// genInfo[numGen].genMinFValue = minFValue;
+	// genInfo[numGen].genAveFValue = aveFValue;
+	//for (int idxInd = 0; idxInd < num_ind; idxInd++)
+	//{
+	//	double diff = group[idxInd].f_value - aveFValue;
+	//	variance += diff * diff;
+	//}
+	//deviation = sqrt(variance / num_ind);
+	//genInfo[numGen].genDevFValue = deviation;
+	//for (int idxDV = 0; idxDV < numDV; idxDV++) {
+	//	genInfo[numGen].arr_val_dv[idxDV] = groupDvInfoArr[curMaxFvalIdx][idxDV];
+	//}
+
 }
 
 void multiProcess(Mat imgArr[][2]) {
@@ -422,8 +500,8 @@ void multiProcess(Mat imgArr[][2]) {
 
 			vector<pair<double, shared_ptr<TreeNode>>> family;
 
-			double score1 = calScoreByInd(parent1, imgArr);
-			double score2 = calScoreByInd(parent2, imgArr);
+			double score1 = calScoreByInd(parent1, imgArr, -1);
+			double score2 = calScoreByInd(parent2, imgArr, -1);
 			// printf("gen: %d, score of the ind: %.4f\n", numGen + 1, score1);
 
 			family.push_back({ score1, parent1 });
@@ -434,14 +512,14 @@ void multiProcess(Mat imgArr[][2]) {
 				auto childB = cloneTree(parent2);
 				crossover(childA, childB);
 				auto chosen = (prob(rng) < 0.5) ? childA : childB;
-				double fit = calScoreByInd(chosen, imgArr);
+				double fit = calScoreByInd(chosen, imgArr, -1);
 				family.push_back({ fit, chosen });
 			}
 
 			for (int idxInd = 0; idxInd < (OFFSPRING_COUNT + 2); idxInd++) {
 				if (prob(rng) < MUTATION_RATE) {
 					mutate(family[idxInd].second);
-					family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr);
+					family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr, -1);
 				}
 			}
 
@@ -468,27 +546,27 @@ void multiProcess(Mat imgArr[][2]) {
 			population[idx1] = cloneTree(elite.second);
 			population[idx2] = cloneTree(rouletteSelected);
 
-			double eliScore = calScoreByInd(population[idx1], imgArr);
-
-			// genInfo.push_back({ eliScore, population[idx1] });
-
+			double eliScore = calScoreByInd(population[idx1], imgArr, -1);
 			printf("the score of elite(%d gen): %.4f", numGen + 1, eliScore);
-			if (numGen == GENERATIONS - 1) {
-				idxBest = idx1;
-				for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
-					calScoreByInd(population[idxInd], imgArr);
 
-					//for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					//	calScoreByInd(population[idxInd], imgArr);
-					//	// indFValInfo[idxInd][idxSet] = population[idxInd]
-					//}
+			// genType curGenInfo = getCurGenInfo(population, imgArr);
+			genInfo.push_back(getCurGenInfo(population, imgArr));
+			// genInfo[numGen] = getCurGenInfo(population, imgArr);
+
+			printf("ENTERING\n");
+
+			if (numGen == GENERATIONS - 1) { // if reached the last gen, then write the info-score of the population into the indFValInfo
+				indFValFlag = 1;
+				for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
+					calScoreByInd(population[idxInd], imgArr, idxInd);
 				}
 			}
+
+
 		}
 		printf("---------------- GEN-END --------------\n");
 
-		indFValFlag = 1;
-		printf("the score of elite(last gen): %.4f", calScoreByInd(population[idxBest], imgArr));
+		/*printf("the score of elite(last gen): %.4f", calScoreByInd(population[idxBest], imgArr));*/
 
 		Mat resImg_01;
 		Mat resImg_02;
@@ -514,15 +592,16 @@ void multiProcess(Mat imgArr[][2]) {
 		for (int i = 0; i < GENERATIONS; i++) {
 			fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
 		}
+
 		//for (int idxDV = 0; idxDV < numDV; idxDV++) {
 		//	fprintf(fl_params, "%d ", genInfo[num_gen - 1].arr_val_dv[idxDV]);
 		//}
 		//fprintf(fl_params, "\n");
 
-		//for (int i = 0; i <= numSets; i++) {
-		//	fprintf(fl_maxFval, "%.4f ", indFvalInfo[curMaxFvalIdx][i]);
-		//}
-		//fprintf(fl_maxFval, "\n");
+		for (int i = 0; i <= numSets; i++) {
+			fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+		}
+		fprintf(fl_maxFval, "\n");
 
 	}
 
