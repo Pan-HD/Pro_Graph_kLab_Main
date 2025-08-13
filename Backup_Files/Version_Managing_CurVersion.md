@@ -59,7 +59,6 @@
   - GP
     - **Version - 01 (ACTIT)**
       - ```BcpFiles -> Files_0721_2025 -> ..._v1```
-      - test branch
 - P5 - ELSE
   - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v1.py```
