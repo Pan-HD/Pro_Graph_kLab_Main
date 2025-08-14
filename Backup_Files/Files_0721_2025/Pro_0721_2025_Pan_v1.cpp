@@ -231,13 +231,13 @@ Mat executeTree(const shared_ptr<TreeNode>& node, Mat& input) { // ind-tree, img
 	}
 }
 
-void collectNodes(const shared_ptr<TreeNode>& node, vector<shared_ptr<TreeNode>>& nodes) {
-	if (!node) return;
-	nodes.push_back(node);
-	for (auto& child : node->children) {
-		collectNodes(child, nodes);
-	}
-}
+//void collectNodes(const shared_ptr<TreeNode>& node, vector<shared_ptr<TreeNode>>& nodes) {
+//	if (!node) return;
+//	nodes.push_back(node);
+//	for (auto& child : node->children) {
+//		collectNodes(child, nodes);
+//	}
+//}
 
 using NodeWithParent = pair<shared_ptr<TreeNode>, shared_ptr<TreeNode>>;
 
@@ -286,14 +286,6 @@ void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
 	}
 }
 
-//void mutate(shared_ptr<TreeNode>& node, int maxDepth = 4) {
-//	vector<shared_ptr<TreeNode>> nodes;
-//	collectNodes(node, nodes);
-//	if (nodes.empty()) return;
-//	int idx = rng() % nodes.size();
-//	nodes[idx] = generateRandomTree(0, maxDepth);
-//}
-
 bool isTerminal(FilterType type) {
 	return (type == TERMINAL_INPUT);
 }
@@ -320,13 +312,39 @@ void adjustChildrenForType(shared_ptr<TreeNode>& node, int maxDepth) {
 	}
 }
 
-void mutate(shared_ptr<TreeNode>& root, int maxDepth = 6) {
-	vector<shared_ptr<TreeNode>> nodes;
-	collectNodes(root, nodes);
-	if (nodes.empty()) return;
+void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
+	using std::shared_ptr;
+	using std::make_shared;
 
-	int idx = rng() % nodes.size();
-	auto& target = nodes[idx];
+	std::vector<NodeWithParent> nodesRoot;
+	collectNodesWithParents(root, nullptr, nodesRoot);
+	if (nodesRoot.empty()) return;
+
+	const size_t pick = rng() % nodesRoot.size();
+	auto& target = nodesRoot[pick].first;   // shared_ptr<TreeNode>
+	auto& targetParent = nodesRoot[pick].second;  // shared_ptr<TreeNode>
+
+	int idxTargetInParent = -1;
+	if (targetParent) {
+		for (size_t i = 0; i < targetParent->children.size(); ++i) {
+			if (targetParent->children[i] == target) {
+				idxTargetInParent = static_cast<int>(i);
+				break;
+			}
+		}
+		if (idxTargetInParent == -1) {
+			return;
+		}
+	}
+
+	auto replaceInParent = [&](const shared_ptr<TreeNode>& repl) {
+		if (!targetParent) {
+			root = repl;
+		}
+		else {
+			targetParent->children[static_cast<size_t>(idxTargetInParent)] = repl;
+		}
+		};
 
 	int mutationType = rng() % 3;
 
@@ -347,17 +365,12 @@ void mutate(shared_ptr<TreeNode>& root, int maxDepth = 6) {
 		else {
 			newNode->children.push_back(target);
 		}
-		target = newNode;
+		replaceInParent(newNode);
 		break;
 	}
 	case 2: {
-		if (!isTerminal(target->type)) {
-			if (isBinaryFilter(target->type) && !target->children.empty()) {
-				target = target->children[0];
-			}
-			else if (!target->children.empty()) {
-				target = target->children[0];
-			}
+		if (!isTerminal(target->type) && !target->children.empty()) {
+			replaceInParent(target->children[0]);
 		}
 		break;
 	}
@@ -493,14 +506,14 @@ string filterTypeToString(FilterType type) {
 	}
 }
 
-void printTree(const shared_ptr<TreeNode>& node, int depth = 0) {
+void printTree(const shared_ptr<TreeNode>& node, int depth = 0, FILE* fl_printTree = stdout) {
 	if (!node) return;
-	for (int i = 0; i < depth; ++i) cout << "    ";
-
-	cout << filterTypeToString(node->type) << "\n";
-
+	for (int i = 0; i < depth; ++i) {
+		fprintf(fl_printTree, "    ");
+	}
+	fprintf(fl_printTree, "%s\n", filterTypeToString(node->type).c_str());
 	for (const auto& child : node->children) {
-		printTree(child, depth + 1);
+		printTree(child, depth + 1, fl_printTree);
 	}
 }
 
@@ -523,6 +536,13 @@ void multiProcess(Mat imgArr[][2]) {
 	FILE* fl_maxFval = nullptr;
 	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0721_2025_v1/output/maxFvalInfo_final.txt", "w");
 	if (err2 != 0 || fl_maxFval == nullptr) {
+		perror("Cannot open the file");
+		return;
+	}
+
+	FILE* fl_printTree = nullptr;
+	errno_t err3 = fopen_s(&fl_printTree, "./imgs_0721_2025_v1/output/printed_tree.txt", "w");
+	if (err3 != 0 || fl_printTree == nullptr) {
 		perror("Cannot open the file");
 		return;
 	}
@@ -594,10 +614,8 @@ void multiProcess(Mat imgArr[][2]) {
 			population[idx1] = cloneTree(elite.second);
 			population[idx2] = cloneTree(rouletteSelected);
 
-			double eliScore = calScoreByInd(population[idx1], imgArr, -1);
-			printf("the score of elite(%d gen): %.4f\n", numGen + 1, eliScore);
-
 			genInfo.push_back(getCurGenInfo(population, imgArr));
+			printf("the score of elite(%d gen): %.4f\n", numGen + 1, genInfo[numGen].eliteFValue);
 
 			if (numGen == GENERATIONS - 1) { // if reached the last gen, then write the info-score of the population into the indFValInfo
 				indFValFlag = 1;
@@ -612,7 +630,7 @@ void multiProcess(Mat imgArr[][2]) {
 		Mat res;
 
 		for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-			if ((idxGen + 1) % 10 == 0) {
+			if ((idxGen + 1) % 100 == 0) {
 				for (int idxSet = 0; idxSet < numSets; idxSet++) {
 					resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
 					sprintf_s(imgName_pro[idxSet], "./imgs_0721_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
@@ -626,9 +644,9 @@ void multiProcess(Mat imgArr[][2]) {
 				}
 			}
 		}
-		printf("---------the printed tree: ---------\n");
-		printf("the score of the bestTree: %.4f\n", genInfo[GENERATIONS - 1].eliteFValue);
-		printTree(genInfo[GENERATIONS - 1].eliteTree);
+		//printf("---------the printed tree: ---------\n");
+		//printf("the score of the bestTree: %.4f\n", genInfo[GENERATIONS - 1].eliteFValue);
+		printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
 
 		for (int i = 0; i < GENERATIONS; i++) {
 			fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
@@ -643,4 +661,5 @@ void multiProcess(Mat imgArr[][2]) {
 
 	fclose(fl_fValue);
 	fclose(fl_maxFval);
+	fclose(fl_printTree);
 }
