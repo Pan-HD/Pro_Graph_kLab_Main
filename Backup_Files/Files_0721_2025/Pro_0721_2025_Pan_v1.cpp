@@ -286,12 +286,82 @@ void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
 	}
 }
 
-void mutate(shared_ptr<TreeNode>& node, int maxDepth = 4) {
+//void mutate(shared_ptr<TreeNode>& node, int maxDepth = 4) {
+//	vector<shared_ptr<TreeNode>> nodes;
+//	collectNodes(node, nodes);
+//	if (nodes.empty()) return;
+//	int idx = rng() % nodes.size();
+//	nodes[idx] = generateRandomTree(0, maxDepth);
+//}
+
+bool isTerminal(FilterType type) {
+	return (type == TERMINAL_INPUT);
+}
+
+bool isBinaryFilter(FilterType type) {
+	return (type == DIFF_PROCESS);
+}
+
+void adjustChildrenForType(shared_ptr<TreeNode>& node, int maxDepth) {
+	if (isTerminal(node->type)) {
+		node->children.clear();
+	}
+	else if (isBinaryFilter(node->type)) {
+		while (node->children.size() < 2)
+			node->children.push_back(generateRandomTree(0, maxDepth - 1));
+		while (node->children.size() > 2)
+			node->children.pop_back();
+	}
+	else {
+		while (node->children.size() < 1)
+			node->children.push_back(generateRandomTree(0, maxDepth - 1));
+		while (node->children.size() > 1)
+			node->children.pop_back();
+	}
+}
+
+void mutate(shared_ptr<TreeNode>& root, int maxDepth = 6) {
 	vector<shared_ptr<TreeNode>> nodes;
-	collectNodes(node, nodes);
+	collectNodes(root, nodes);
 	if (nodes.empty()) return;
+
 	int idx = rng() % nodes.size();
-	nodes[idx] = generateRandomTree(0, maxDepth);
+	auto& target = nodes[idx];
+
+	int mutationType = rng() % 3;
+
+	switch (mutationType) {
+	case 0: {
+		FilterType newType = static_cast<FilterType>(rng() % (NUM_TYPE_FUNC + 1));
+		target->type = newType;
+		adjustChildrenForType(target, maxDepth);
+		break;
+	}
+	case 1: {
+		auto newNode = make_shared<TreeNode>();
+		newNode->type = static_cast<FilterType>(1 + (rng() % NUM_TYPE_FUNC));
+		if (isBinaryFilter(newNode->type)) {
+			newNode->children.push_back(generateRandomTree(0, maxDepth - 1));
+			newNode->children.push_back(target);
+		}
+		else {
+			newNode->children.push_back(target);
+		}
+		target = newNode;
+		break;
+	}
+	case 2: {
+		if (!isTerminal(target->type)) {
+			if (isBinaryFilter(target->type) && !target->children.empty()) {
+				target = target->children[0];
+			}
+			else if (!target->children.empty()) {
+				target = target->children[0];
+			}
+		}
+		break;
+	}
+	}
 }
 
 int testFlag = 0;
