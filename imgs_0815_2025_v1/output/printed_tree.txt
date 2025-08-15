@@ -1,19 +1,46 @@
-DIFF_PROCESS
+BITWISE_NOT
     DIFF_PROCESS
-        TERMINAL_INPUT
-        MORPHOLOGY_EX
+        THRESHOLD
             DIFF_PROCESS
-                MORPHOLOGY_EX
-                    MORPHOLOGY_EX
+                DIFF_PROCESS
+                    THRESHOLD
                         MORPHOLOGY_EX
-                            BLUR
+                            DIFF_PROCESS
+                                MED_BLUR
+                                    MED_BLUR
+                                        MED_BLUR
+                                            MED_BLUR
+                                                TERMINAL_INPUT
                                 TERMINAL_INPUT
-                MORPHOLOGY_EX
-                    BITWISE_NOT
-                        BLUR
-                            TERMINAL_INPUT
-    MORPHOLOGY_EX
-        DIFF_PROCESS
-            MED_BLUR
+                    BLUR
+                        MORPHOLOGY_EX
+                            DIFF_PROCESS
+                                BITWISE_NOT
+                                    DIFF_PROCESS
+                                        MORPHOLOGY_EX
+                                            CON_PRO_SINGLE_TIME
+                                                MORPHOLOGY_EX
+                                                    TERMINAL_INPUT
+                                        CON_PRO_SINGLE_TIME
+                                            CON_PRO_SINGLE_TIME
+                                                BITWISE_NOT
+                                                    MORPHOLOGY_EX
+                                                        DIFF_PROCESS
+                                                            MED_BLUR
+                                                                BITWISE_NOT
+                                                                    TERMINAL_INPUT
+                                                            MORPHOLOGY_EX
+                                                                MED_BLUR
+                                                                    TERMINAL_INPUT
+                                TERMINAL_INPUT
                 TERMINAL_INPUT
-            TERMINAL_INPUT
+        MED_BLUR
+            MED_BLUR
+                MED_BLUR
+                    BLUR
+                        MORPHOLOGY_EX
+                            MED_BLUR
+                                BITWISE_NOT
+                                    BLUR
+                                        MED_BLUR
+                                            TERMINAL_INPUT

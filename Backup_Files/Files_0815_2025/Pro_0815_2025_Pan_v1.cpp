@@ -231,14 +231,6 @@ Mat executeTree(const shared_ptr<TreeNode>& node, Mat& input) { // ind-tree, img
 	}
 }
 
-//void collectNodes(const shared_ptr<TreeNode>& node, vector<shared_ptr<TreeNode>>& nodes) {
-//	if (!node) return;
-//	nodes.push_back(node);
-//	for (auto& child : node->children) {
-//		collectNodes(child, nodes);
-//	}
-//}
-
 using NodeWithParent = pair<shared_ptr<TreeNode>, shared_ptr<TreeNode>>;
 
 void collectNodesWithParents(const shared_ptr<TreeNode>& node,
@@ -389,6 +381,8 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], int numInd) {
 
 	double f1_score[numSets];
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
+		// make sure all metaImgs are binaried ones(changed by specific tasks)
+		threshold(metaImg_g[idxSet], metaImg_g[idxSet], 127, 255, THRESH_BINARY);
 		int tp = 0, fp = 0, fn = 0;
 		for (int i = 0; i < metaImg_g[idxSet].rows; i++) {
 			for (int j = 0; j < metaImg_g[idxSet].cols; j++) {
