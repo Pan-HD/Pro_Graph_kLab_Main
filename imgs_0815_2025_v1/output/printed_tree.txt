@@ -1,0 +1,19 @@
+DIFF_PROCESS
+    DIFF_PROCESS
+        TERMINAL_INPUT
+        MORPHOLOGY_EX
+            DIFF_PROCESS
+                MORPHOLOGY_EX
+                    MORPHOLOGY_EX
+                        MORPHOLOGY_EX
+                            BLUR
+                                TERMINAL_INPUT
+                MORPHOLOGY_EX
+                    BITWISE_NOT
+                        BLUR
+                            TERMINAL_INPUT
+    MORPHOLOGY_EX
+        DIFF_PROCESS
+            MED_BLUR
+                TERMINAL_INPUT
+            TERMINAL_INPUT
