@@ -19,7 +19,7 @@ using namespace cv;
 #define OFFSPRING_COUNT 16
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 7
-#define MAX_DEPTH 7
+#define MAX_DEPTH 8
 
 void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
