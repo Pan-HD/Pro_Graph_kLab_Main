@@ -19,6 +19,7 @@ using namespace cv;
 #define OFFSPRING_COUNT 16
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 7
+#define MAX_DEPTH 7 // { 0, 1, 2, ... }
 
 void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
@@ -100,7 +101,7 @@ random_device rd;
 mt19937 rng(rd());
 uniform_real_distribution<> prob(0.0, 1.0);
 
-shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = 6) {
+shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = MAX_DEPTH) {
 	if (depth >= maxDepth || prob(rng) < 0.1) {
 		return make_shared<TreeNode>(TreeNode{ TERMINAL_INPUT, {} });
 	}
@@ -110,6 +111,8 @@ shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = 6) {
 
 	int numChildren = (t == DIFF_PROCESS ? 2 : 1);
 	for (int i = 0; i < numChildren; ++i) {
+		// only the process of diff, with 2 inputs
+		// the inputs of diff: (1) random inp, (2) TERMINAL_INPUT
 		if (i == 0) {
 			node->children.push_back(generateRandomTree(depth + 1, maxDepth));
 		}
@@ -243,6 +246,70 @@ void collectNodesWithParents(const shared_ptr<TreeNode>& node,
 	}
 }
 
+bool isTerminal(FilterType type) {
+	return (type == TERMINAL_INPUT);
+}
+
+bool isBinaryFilter(FilterType type) {
+	return (type == DIFF_PROCESS);
+}
+
+int getTreeMaxDepth(const std::shared_ptr<TreeNode>& node, int depth = 0) {
+	if (!node) return depth;
+	if (node->children.empty()) return depth;
+	int maxChildDepth = depth;
+	for (auto& child : node->children) {
+		maxChildDepth = std::max(maxChildDepth, getTreeMaxDepth(child, depth + 1));
+	}
+	return maxChildDepth;
+}
+
+/*
+	Function:
+	(1) Adjust the children for type
+	(2) Limit the max-depth of the tree
+*/
+void adjustChildrenForType(shared_ptr<TreeNode>& node, int currentDepth, int maxDepth, int overFlag = 0) {
+	int remainingDepth = maxDepth - currentDepth;
+	if (isTerminal(node->type)) {
+		node->children.clear();
+	}
+	else {
+		// if the remainingDepth go down to 1, the child node of current node can only been set to the terminal node
+		if (remainingDepth <= 1) {
+			// 01 - cleanning the children array
+			node->children.clear();
+			// 02 - set push back times and judge the type of the node, if isBinaryFilter, change the times
+			int cntPushBack = 1;
+			if (isBinaryFilter(node->type)) {
+				cntPushBack = 2;
+			}
+			// 03 - push back with the TERMINAL_INPUT
+			for (int idx = 0; idx < cntPushBack; idx++) {
+				node->children.push_back(make_shared<TreeNode>(TreeNode{ TERMINAL_INPUT, {} }));
+			}
+		}
+		else {
+			int requiredChildren = isBinaryFilter(node->type) ? 2 : 1;
+			// current tree with over-depth, needs to cut down the branch
+			if (overFlag) node->children.clear();
+			while ((int)node->children.size() < requiredChildren) {
+				node->children.push_back(generateRandomTree(currentDepth + 1, maxDepth));
+			}
+			while ((int)node->children.size() > requiredChildren) {
+				node->children.pop_back();
+			}
+		}
+	}
+}
+
+void confirmDepth(shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
+	int finalDepth = getTreeMaxDepth(root);
+	if (finalDepth > maxDepth) {
+		adjustChildrenForType(root, 0, maxDepth, 1);
+	}
+}
+
 void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
 	vector<NodeWithParent> nodesA, nodesB;
 	collectNodesWithParents(a, nullptr, nodesA);
@@ -276,35 +343,12 @@ void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
 	if (itA != childrenA.end() && itB != childrenB.end()) {
 		swap(*itA, *itB);
 	}
+
+	confirmDepth(a);
+	confirmDepth(b);
 }
 
-bool isTerminal(FilterType type) {
-	return (type == TERMINAL_INPUT);
-}
-
-bool isBinaryFilter(FilterType type) {
-	return (type == DIFF_PROCESS);
-}
-
-void adjustChildrenForType(shared_ptr<TreeNode>& node, int maxDepth) {
-	if (isTerminal(node->type)) {
-		node->children.clear();
-	}
-	else if (isBinaryFilter(node->type)) {
-		while (node->children.size() < 2)
-			node->children.push_back(generateRandomTree(0, maxDepth - 1));
-		while (node->children.size() > 2)
-			node->children.pop_back();
-	}
-	else {
-		while (node->children.size() < 1)
-			node->children.push_back(generateRandomTree(0, maxDepth - 1));
-		while (node->children.size() > 1)
-			node->children.pop_back();
-	}
-}
-
-void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
+void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 	using std::shared_ptr;
 	using std::make_shared;
 
@@ -313,10 +357,15 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
 	if (nodesRoot.empty()) return;
 
 	const size_t pick = rng() % nodesRoot.size();
-	auto& target = nodesRoot[pick].first;   // shared_ptr<TreeNode>
-	auto& targetParent = nodesRoot[pick].second;  // shared_ptr<TreeNode>
+	auto& target = nodesRoot[pick].first;
+	auto& targetParent = nodesRoot[pick].second;
 
 	int idxTargetInParent = -1;
+	int currentDepth = 0;
+
+	// target node is not the root node
+	// 01 - get the idx of target in targetParent
+	// 02 - get the depth of the target in the root(tree) -> currentDepth >= 1
 	if (targetParent) {
 		for (size_t i = 0; i < targetParent->children.size(); ++i) {
 			if (targetParent->children[i] == target) {
@@ -324,9 +373,17 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
 				break;
 			}
 		}
-		if (idxTargetInParent == -1) {
-			return;
-		}
+		if (idxTargetInParent == -1) return; // error situation
+
+		std::function<int(shared_ptr<TreeNode>, int)> findDepth = [&](shared_ptr<TreeNode> node, int depth) -> int {
+			if (node == target) return depth;
+			for (auto& child : node->children) {
+				int d = findDepth(child, depth + 1);
+				if (d != -1) return d;
+			}
+			return -1;
+			};
+		currentDepth = findDepth(root, 0);
 	}
 
 	auto replaceInParent = [&](const shared_ptr<TreeNode>& repl) {
@@ -341,17 +398,21 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
 	int mutationType = rng() % 3;
 
 	switch (mutationType) {
-	case 0: {
+	case 0: { // type - modify
 		FilterType newType = static_cast<FilterType>(rng() % (NUM_TYPE_FUNC + 1));
 		target->type = newType;
-		adjustChildrenForType(target, maxDepth);
+		adjustChildrenForType(target, currentDepth, maxDepth);
 		break;
 	}
-	case 1: {
+	case 1: { // type - insert
+		int remainingDepth = maxDepth - currentDepth;
+		if (remainingDepth <= 1) break;
+
 		auto newNode = make_shared<TreeNode>();
 		newNode->type = static_cast<FilterType>(1 + (rng() % NUM_TYPE_FUNC));
+
 		if (isBinaryFilter(newNode->type)) {
-			newNode->children.push_back(generateRandomTree(0, maxDepth - 1));
+			newNode->children.push_back(generateRandomTree(currentDepth + 1, maxDepth));
 			newNode->children.push_back(target);
 		}
 		else {
@@ -360,13 +421,15 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = 6) {
 		replaceInParent(newNode);
 		break;
 	}
-	case 2: {
+	case 2: { // type - delete
 		if (!isTerminal(target->type) && !target->children.empty()) {
 			replaceInParent(target->children[0]);
 		}
 		break;
 	}
 	}
+	// make sure the depth is within [0, maxDepth]
+	confirmDepth(root);
 }
 
 int testFlag = 0;
@@ -378,14 +441,15 @@ double calculateF1Score(double precision, double recall) {
 
 // for calculating the fValue of the ind and writting the organized info into group-arr and groupDvInfoArr
 double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], int numInd) {
-
 	double f1_score[numSets];
 	for (int idxSet = 0; idxSet < numSets; idxSet++) {
-		// make sure all metaImgs are binaried ones(changed by specific tasks)
-		threshold(metaImg_g[idxSet], metaImg_g[idxSet], 127, 255, THRESH_BINARY);
 		int tp = 0, fp = 0, fn = 0;
 		for (int i = 0; i < metaImg_g[idxSet].rows; i++) {
 			for (int j = 0; j < metaImg_g[idxSet].cols; j++) {
+				// if the metaImg processed without threshFunc, then return min-score directly.
+				if (metaImg_g[idxSet].at<uchar>(i, j) != 0 && metaImg_g[idxSet].at<uchar>(i, j) != 255) {
+					return 0.01;
+				}
 				if (metaImg_g[idxSet].at<uchar>(i, j) == 0 && tarImg_g[idxSet].at<uchar>(i, j) == 0) {
 					tp += 1;
 				}
