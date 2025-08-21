@@ -15,7 +15,7 @@ using namespace cv;
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 100
-#define GENERATIONS 1000 
+#define GENERATIONS 3000 
 #define OFFSPRING_COUNT 16
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 19
@@ -555,7 +555,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 	confirmDepth(root);
 }
 
-int testFlag = 0;
+// int testFlag = 0;
 
 double calculateF1Score(double precision, double recall) {
 	if (precision + recall == 0) return 0.0;
@@ -639,7 +639,8 @@ genType getCurGenInfo(vector<shared_ptr<TreeNode>>& population, Mat imgArr[][2])
 
 	genType curGenInfo;
 
-	testFlag = 1;
+	// testFlag = 1;
+
 	for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
 		scoreArr[idxInd] = calScoreByInd(population[idxInd], imgArr, -1);
 	}
@@ -747,9 +748,9 @@ void multiProcess(Mat imgArr[][2]) {
 			population.push_back(generateRandomTree());
 		}
 
-		shared_ptr<TreeNode> best;
-		int idxBest = 0;
-		double bestFitness = -1;
+		//shared_ptr<TreeNode> best;
+		//int idxBest = 0;
+		//double bestFitness = -1;
 
 		for (int numGen = 0; numGen < GENERATIONS; numGen++) {
 			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
@@ -784,12 +785,12 @@ void multiProcess(Mat imgArr[][2]) {
 				}
 			}
 
-			for (const auto& f : family) {
-				if (f.first > bestFitness) {
-					bestFitness = f.first;
-					best = cloneTree(f.second);
-				}
-			}
+			//for (const auto& f : family) {
+			//	if (f.first > bestFitness) {
+			//		bestFitness = f.first;
+			//		best = cloneTree(f.second);
+			//	}
+			//}
 
 			sort(family.rbegin(), family.rend()); // descending sort by f1_score(ind.first)
 			auto elite = family[0];
@@ -797,15 +798,25 @@ void multiProcess(Mat imgArr[][2]) {
 			for (const auto& f : family) total += f.first;
 			double r = prob(rng) * total, accum = 0;
 			shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
+			double scoreRouletteSelected = 0.01;
 			for (const auto& f : family) {
 				accum += f.first;
 				if (accum >= r) {
 					rouletteSelected = f.second;
+					scoreRouletteSelected = f.first;
 					break;
 				}
 			}
-			population[idx1] = cloneTree(elite.second);
-			population[idx2] = cloneTree(rouletteSelected);
+
+			// when elite.first <= score1 && scoreRouletteSecelected <= score2
+			// make sure the ind with max-score in last generation would not been replaced by elite and roulette.
+			if (elite.first > score1) {
+				population[idx1] = cloneTree(elite.second);
+			}
+
+			if (scoreRouletteSelected > score2) {
+				population[idx2] = cloneTree(rouletteSelected);
+			}
 
 			genInfo.push_back(getCurGenInfo(population, imgArr));
 			printf("the score of elite(%d gen): %.4f\n", numGen + 1, genInfo[numGen].eliteFValue);
