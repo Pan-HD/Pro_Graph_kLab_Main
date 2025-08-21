@@ -1,0 +1,25 @@
+DIFF_PROCESS
+    DILATE
+        BITWISE_NOT
+            CON_PRO_SINGLE_TIME
+                BLUR
+                    THRESHOLD_31
+                        BITWISE_AND
+                            BITWISE_XOR
+                                MED_BLUR
+                                    THRESHOLD_9
+                                        TERMINAL_INPUT
+                                THRESHOLD_127
+                                    TERMINAL_INPUT
+                            TERMINAL_INPUT
+    THRESHOLD_63
+        BLUR
+            BITWISE_XOR
+                TERMINAL_INPUT
+                THRESHOLD_127
+                    BITWISE_XOR
+                        BLUR
+                            TERMINAL_INPUT
+                        ERODE
+                            CON_PRO_SINGLE_TIME
+                                TERMINAL_INPUT
