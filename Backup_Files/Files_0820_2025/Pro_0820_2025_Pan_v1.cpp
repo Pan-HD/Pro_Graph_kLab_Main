@@ -15,7 +15,7 @@ using namespace cv;
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 100
-#define GENERATIONS 3000 
+#define GENERATIONS 10000 
 #define OFFSPRING_COUNT 16
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 19
@@ -23,17 +23,6 @@ using namespace cv;
 
 void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
-
-//enum FilterType { // type-terminal and type-function
-//	TERMINAL_INPUT,
-//	BLUR,
-//	MED_BLUR,
-//	DIFF_PROCESS, // with 2 input imgs
-//	THRESHOLD,
-//	BITWISE_NOT,
-//	MORPHOLOGY_EX,
-//	CON_PRO_SINGLE_TIME,
-//};
 
 enum FilterType { // type-terminal and type-function
 	TERMINAL_INPUT,
@@ -555,8 +544,6 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 	confirmDepth(root);
 }
 
-// int testFlag = 0;
-
 double calculateF1Score(double precision, double recall) {
 	if (precision + recall == 0) return 0.0;
 	return 2.0 * (precision * recall) / (precision + recall);
@@ -748,10 +735,6 @@ void multiProcess(Mat imgArr[][2]) {
 			population.push_back(generateRandomTree());
 		}
 
-		//shared_ptr<TreeNode> best;
-		//int idxBest = 0;
-		//double bestFitness = -1;
-
 		for (int numGen = 0; numGen < GENERATIONS; numGen++) {
 			cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
 			int idx1 = rng() % POP_SIZE;
@@ -784,13 +767,6 @@ void multiProcess(Mat imgArr[][2]) {
 					family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr, -1);
 				}
 			}
-
-			//for (const auto& f : family) {
-			//	if (f.first > bestFitness) {
-			//		bestFitness = f.first;
-			//		best = cloneTree(f.second);
-			//	}
-			//}
 
 			sort(family.rbegin(), family.rend()); // descending sort by f1_score(ind.first)
 			auto elite = family[0];
@@ -834,7 +810,7 @@ void multiProcess(Mat imgArr[][2]) {
 		Mat res;
 
 		for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-			if ((idxGen + 1) % 100 == 0) {
+			if ((idxGen + 1) % 1000 == 0) {
 				for (int idxSet = 0; idxSet < numSets; idxSet++) {
 					resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
 					sprintf_s(imgName_pro[idxSet], "./imgs_0820_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
@@ -848,8 +824,6 @@ void multiProcess(Mat imgArr[][2]) {
 				}
 			}
 		}
-		//printf("---------the printed tree: ---------\n");
-		//printf("the score of the bestTree: %.4f\n", genInfo[GENERATIONS - 1].eliteFValue);
 		printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
 
 		for (int i = 0; i < GENERATIONS; i++) {

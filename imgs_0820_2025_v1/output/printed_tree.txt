@@ -1,22 +1,59 @@
-BITWISE_NOT
-    THRESHOLD_9
-        DIFF_PROCESS
-            ERODE
-                GAUSSIAN_BLUR
-                    THRESHOLD_9
-                        DIFF_PROCESS
-                            MED_BLUR
-                                MED_BLUR
-                                    TERMINAL_INPUT
+THRESHOLD_127
+    DIFF_PROCESS
+        GAUSSIAN_BLUR
+            BITWISE_XOR
+                BITWISE_AND
+                    BLUR
+                        BILATERAL_FILTER
                             TERMINAL_INPUT
-            BLUR
+                    BITWISE_OR
+                        CANNY
+                            BITWISE_AND
+                                BITWISE_OR
+                                    CANNY
+                                        TERMINAL_INPUT
+                                    MED_BLUR
+                                        TERMINAL_INPUT
+                                TERMINAL_INPUT
+                        DILATE
+                            BITWISE_NOT
+                                TERMINAL_INPUT
+                THRESHOLD_63
+                    THRESHOLD_127
+                        BITWISE_OR
+                            BITWISE_NOT
+                                BILATERAL_FILTER
+                                    CANNY
+                                        TERMINAL_INPUT
+                            BITWISE_OR
+                                BITWISE_NOT
+                                    MED_BLUR
+                                        TERMINAL_INPUT
+                                TERMINAL_INPUT
+        MED_BLUR
+            BITWISE_AND
+                THRESHOLD_127
+                    BLUR
+                        BITWISE_XOR
+                            BLUR
+                                SOBEL_X
+                                    SOBEL_Y
+                                        TERMINAL_INPUT
+                            ERODE
+                                ERODE
+                                    TERMINAL_INPUT
                 BITWISE_XOR
                     BITWISE_OR
-                        TERMINAL_INPUT
-                        BITWISE_OR
-                            TERMINAL_INPUT
-                            THRESHOLD_127
-                                BITWISE_NOT
-                                    THRESHOLD_31
+                        CANNY
+                            SOBEL_Y
+                                ERODE
+                                    TERMINAL_INPUT
+                        SOBEL_Y
+                            SOBEL_Y
+                                TERMINAL_INPUT
+                    THRESHOLD_31
+                        DILATE
+                            CANNY
+                                SOBEL_Y
+                                    BITWISE_NOT
                                         TERMINAL_INPUT
-                    TERMINAL_INPUT
