@@ -11,11 +11,11 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 1
+#define sysRunTimes 5
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 100
-#define GENERATIONS 10000 
+#define GENERATIONS 10000
 #define OFFSPRING_COUNT 16
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 19
@@ -66,6 +66,7 @@ vector<genType> genInfo;
 double indFValInfo[POP_SIZE][numSets + 1];
 int indFValFlag = 0;
 int curMaxFvalIdx = 0;
+double curThreshFVal = 3.00;
 
 int main(void) {
 	Mat imgArr[numSets][2]; // imgArr -> storing all images numSets(numSets pairs) * 2(ori, tar)
@@ -806,35 +807,37 @@ void multiProcess(Mat imgArr[][2]) {
 		}
 		printf("---------------- GEN-END --------------\n");
 
-		Mat resImg_02;
-		Mat res;
+		if (indFValInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
+			curThreshFVal = indFValInfo[curMaxFvalIdx][numSets];
 
-		for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-			if ((idxGen + 1) % 1000 == 0) {
-				for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0820_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-					imwrite(imgName_pro[idxSet], resImg_02);
-					if (idxGen == GENERATIONS - 1) {
-						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0820_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
-						imwrite(imgName_final[idxSet], res);
+			Mat resImg_02;
+			Mat res;
+			for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
+				if ((idxGen + 1) % 1000 == 0) {
+					for (int idxSet = 0; idxSet < numSets; idxSet++) {
+						resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
+						sprintf_s(imgName_pro[idxSet], "./imgs_0820_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+						imwrite(imgName_pro[idxSet], resImg_02);
+						if (idxGen == GENERATIONS - 1) {
+							vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+							hconcat(images, res);
+							sprintf_s(imgName_final[idxSet], "./imgs_0820_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
+							imwrite(imgName_final[idxSet], res);
+						}
 					}
 				}
 			}
-		}
-		printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
+			printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
 
-		for (int i = 0; i < GENERATIONS; i++) {
-			fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-		}
+			for (int i = 0; i < GENERATIONS; i++) {
+				fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+			}
 
-		for (int i = 0; i <= numSets; i++) {
-			fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+			for (int i = 0; i <= numSets; i++) {
+				fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+			}
+			fprintf(fl_maxFval, "\n");
 		}
-		fprintf(fl_maxFval, "\n");
-
 	}
 
 	fclose(fl_fValue);

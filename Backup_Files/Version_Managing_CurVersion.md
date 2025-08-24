@@ -61,14 +61,14 @@
       - ```BcpFiles -> Files_0721_2025 -> ..._v1```
         - Version-1.0
       - ```BcpFiles -> Files_0815_2025 -> ..._v1```
-        - **Version-2.0**
-          - **Waiting for Report (0821)**
+        - Version-2.0
       - ```BcpFiles -> Files_0820_2025 -> ..._v1```
-        - **TEST BRANCH**
+        - **Version-3.0**
+        - **Waiting for report・・・**
 - P5 - ELSE
   - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v1.py```
   - generating the mask image with a specified radius
     - ```BcpFiles -> Files_1104 -> ..._v1```
-  - **TEST Of GP Program (for studying)**
-    - ```BcpFiles -> Files_0424_2025 -> ..._v1```
+  - **Calculate the f1-value of imgs trained by Swin-UNet**
+    -  ```BcpFiles -> Files_0815_2025 -> ..._v3```

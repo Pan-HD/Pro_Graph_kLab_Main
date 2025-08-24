@@ -11,7 +11,7 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 1
+#define sysRunTimes 5
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 100
@@ -54,6 +54,7 @@ vector<genType> genInfo;
 double indFValInfo[POP_SIZE][numSets + 1];
 int indFValFlag = 0;
 int curMaxFvalIdx = 0;
+double curThreshFVal = 3.00;
 
 int main(void) {
 	Mat imgArr[numSets][2]; // imgArr -> storing all images numSets(numSets pairs) * 2(ori, tar)
@@ -662,15 +663,27 @@ void multiProcess(Mat imgArr[][2]) {
 			for (const auto& f : family) total += f.first;
 			double r = prob(rng) * total, accum = 0;
 			shared_ptr<TreeNode> rouletteSelected = family[1].second; // fallback
+			double scoreRouletteSelected = 0.01;
 			for (const auto& f : family) {
 				accum += f.first;
 				if (accum >= r) {
 					rouletteSelected = f.second;
+					scoreRouletteSelected = f.first;
 					break;
 				}
 			}
-			population[idx1] = cloneTree(elite.second);
-			population[idx2] = cloneTree(rouletteSelected);
+			//population[idx1] = cloneTree(elite.second);
+			//population[idx2] = cloneTree(rouletteSelected);
+
+			// when elite.first <= score1 && scoreRouletteSecelected <= score2
+			// make sure the ind with max-score in last generation would not been replaced by elite and roulette.
+			if (elite.first > score1) {
+				population[idx1] = cloneTree(elite.second);
+			}
+
+			if (scoreRouletteSelected > score2) {
+				population[idx2] = cloneTree(rouletteSelected);
+			}
 
 			genInfo.push_back(getCurGenInfo(population, imgArr));
 			printf("the score of elite(%d gen): %.4f\n", numGen + 1, genInfo[numGen].eliteFValue);
@@ -684,37 +697,40 @@ void multiProcess(Mat imgArr[][2]) {
 		}
 		printf("---------------- GEN-END --------------\n");
 
-		Mat resImg_02;
-		Mat res;
+		if (indFValInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
+			curThreshFVal = indFValInfo[curMaxFvalIdx][numSets];
 
-		for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-			if ((idxGen + 1) % 100 == 0) {
-				for (int idxSet = 0; idxSet < numSets; idxSet++) {
-					resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
-					sprintf_s(imgName_pro[idxSet], "./imgs_0815_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
-					imwrite(imgName_pro[idxSet], resImg_02);
-					if (idxGen == GENERATIONS - 1) {
-						vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
-						hconcat(images, res);
-						sprintf_s(imgName_final[idxSet], "./imgs_0815_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
-						imwrite(imgName_final[idxSet], res);
+			Mat resImg_02;
+			Mat res;
+
+			for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
+				if ((idxGen + 1) % 100 == 0) {
+					for (int idxSet = 0; idxSet < numSets; idxSet++) {
+						resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
+						sprintf_s(imgName_pro[idxSet], "./imgs_0815_2025_v1/output/img_0%d/Gen-%d.png", idxSet + 1, idxGen + 1);
+						imwrite(imgName_pro[idxSet], resImg_02);
+						if (idxGen == GENERATIONS - 1) {
+							vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
+							hconcat(images, res);
+							sprintf_s(imgName_final[idxSet], "./imgs_0815_2025_v1/output/img_0%d/imgs_final.png", idxSet + 1);
+							imwrite(imgName_final[idxSet], res);
+						}
 					}
 				}
 			}
-		}
-		//printf("---------the printed tree: ---------\n");
-		//printf("the score of the bestTree: %.4f\n", genInfo[GENERATIONS - 1].eliteFValue);
-		printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
+			//printf("---------the printed tree: ---------\n");
+			//printf("the score of the bestTree: %.4f\n", genInfo[GENERATIONS - 1].eliteFValue);
+			printTree(genInfo[GENERATIONS - 1].eliteTree, 0, fl_printTree);
 
-		for (int i = 0; i < GENERATIONS; i++) {
-			fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-		}
+			for (int i = 0; i < GENERATIONS; i++) {
+				fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+			}
 
-		for (int i = 0; i <= numSets; i++) {
-			fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+			for (int i = 0; i <= numSets; i++) {
+				fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+			}
+			fprintf(fl_maxFval, "\n");
 		}
-		fprintf(fl_maxFval, "\n");
-
 	}
 
 	fclose(fl_fValue);
