@@ -1,48 +1,11 @@
-DIFF_PROCESS
-    BITWISE_NOT
-        MORPHOLOGY_EX
-            THRESHOLD
-                DIFF_PROCESS
-                    MED_BLUR
-                        TERMINAL_INPUT
-                    TERMINAL_INPUT
+THRESHOLD
     THRESHOLD
         DIFF_PROCESS
-            MED_BLUR
-                MED_BLUR
-                    MED_BLUR
-                        MED_BLUR
-                            TERMINAL_INPUT
             TERMINAL_INPUT
-DIFF_PROCESS
-    BITWISE_NOT
-        MORPHOLOGY_EX
-            THRESHOLD
-                DIFF_PROCESS
+            DIFF_PROCESS
+                BLUR
                     MED_BLUR
                         TERMINAL_INPUT
-                    TERMINAL_INPUT
-    THRESHOLD
-        DIFF_PROCESS
-            MED_BLUR
-                MED_BLUR
-                    MED_BLUR
-                        MED_BLUR
-                            TERMINAL_INPUT
-            TERMINAL_INPUT
-DIFF_PROCESS
-    BITWISE_NOT
-        MORPHOLOGY_EX
-            THRESHOLD
-                DIFF_PROCESS
-                    MED_BLUR
+                BITWISE_NOT
+                    BLUR
                         TERMINAL_INPUT
-                    TERMINAL_INPUT
-    THRESHOLD
-        DIFF_PROCESS
-            MED_BLUR
-                MED_BLUR
-                    MED_BLUR
-                        MED_BLUR
-                            TERMINAL_INPUT
-            TERMINAL_INPUT
