@@ -16,7 +16,6 @@ using namespace cv;
 #define POP_SIZE 1
 
 void imgShow(const string& name, const Mat& img);
-void multiProcess(Mat imgArr[][2]);
 double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], int numInd);
 
 // for storing the f-value of every individual in the group
