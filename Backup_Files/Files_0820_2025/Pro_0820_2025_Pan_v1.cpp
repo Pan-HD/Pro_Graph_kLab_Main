@@ -11,7 +11,7 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 5
+#define sysRunTimes 3
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 #define POP_SIZE 100
@@ -495,7 +495,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 				if (d != -1) return d;
 			}
 			return -1;
-			};
+		};
 		currentDepth = findDepth(root, 0);
 	}
 
@@ -506,7 +506,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 		else {
 			targetParent->children[static_cast<size_t>(idxTargetInParent)] = repl;
 		}
-		};
+	};
 
 	int mutationType = rng() % 3;
 
