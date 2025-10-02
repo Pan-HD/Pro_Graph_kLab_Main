@@ -31,5 +31,10 @@
       opencv_world490.lib
       ```
 
-  
+- P4 ( .dll文件相关报错解决 )
+
+  - ```
+    把 opencv_world490.dll 复制到 Pro_Graph_kLab.exe 所在的目录: 
+    F:\ComputerScience\OpenCV_VS_Pro\Pro_Graph_kLab\x64\Release
+    ```
 
