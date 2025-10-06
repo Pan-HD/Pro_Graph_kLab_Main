@@ -68,6 +68,9 @@
     - **Memo**
       - Program Bug　ー＞　When running time been set to { 2, 3, 4, ... }, The resImg and output f1-score is not matched
         - Wait to resolve
+  - GP + GA
+    - ```BcpFiles -> Files_1006_2025 -> ..._v1```
+      - **Version-4.0**
 - P5 - ELSE
   - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v1.py```
