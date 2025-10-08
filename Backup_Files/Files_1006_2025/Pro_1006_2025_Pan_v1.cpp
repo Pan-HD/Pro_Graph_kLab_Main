@@ -410,3 +410,176 @@ int main() {
     runPT_ACTIT(input, target);
     return 0;
 }
+
+
+/*
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <cmath>
+#include <iostream>
+#include <vector>
+#include <memory>
+#include <random>
+#include <opencv2/opencv.hpp>
+
+using namespace std;
+using namespace cv;
+
+#define sysRunTimes 3
+#define numSets 8 // the num of sets(pairs)
+#define idSet 1 // for mark the selected set if the numSets been set of 1
+#define POP_SIZE 50
+#define GENERATIONS 200
+#define OFFSPRING_COUNT 16
+#define MUTATION_RATE 0.9
+#define NUM_TYPE_FUNC 19
+#define MAX_DEPTH 10 // { 0, 1, 2, ... }
+#define ENABLE_GA true
+#define GA_POP 20
+#define GA_GENERATIONS 40
+#define INITIAL_BIAS_THRESHOLD 0.05
+#define BIAS_DECAY 0.9
+#define BIAS_WINDOW 5
+
+random_device rd;
+mt19937 rng(rd());
+uniform_real_distribution<> prob(0.0, 1.0);
+
+enum FilterType { // type-terminal and type-function
+    TERMINAL_INPUT,
+    GAUSSIAN_BLUR,
+    MED_BLUR,
+    BLUR,
+    BILATERAL_FILTER,
+    SOBEL_X,
+    SOBEL_Y,
+    CANNY,
+    DIFF_PROCESS,
+    //THRESHOLD_9,
+    //THRESHOLD_31,
+    //THRESHOLD_63,
+    //THRESHOLD_127,
+    THRESHOLD,
+    ERODE,
+    DILATE,
+    CON_PRO_SINGLE_TIME,
+    BITWISE_AND,
+    BITWISE_OR,
+    BITWISE_NOT,
+    BITWISE_XOR,
+};
+
+struct ParamDesc {
+    int n;
+    //double minv;
+    //double maxv;
+    int minv;
+    int maxv;
+};
+unordered_map<FilterType, ParamDesc> g_paramDesc;
+
+void initParamDesc() {
+    g_paramDesc[GAUSSIAN_BLUR] = { 2, 1, 31 };
+    g_paramDesc[MED_BLUR] = { 1, 1, 31 };
+    g_paramDesc[BLUR] = { 1, 1, 31 };
+    g_paramDesc[BILATERAL_FILTER] = { 3, 1, 150 };
+    g_paramDesc[CANNY] = { 2, 1, 255 };
+    g_paramDesc[THRESHOLD] = { 1, 0, 255 };
+    g_paramDesc[ERODE] = { 1, 0, 5 };
+    g_paramDesc[DILATE] = { 1, 0, 5 };
+    g_paramDesc[CON_PRO_SINGLE_TIME] = { 3, 0, 15 };
+}
+
+struct TreeNode {
+    FilterType type;
+    vector<shared_ptr<TreeNode>> children;
+    vector<double> params;
+};
+
+struct genType {
+    shared_ptr<TreeNode> eliteTree;
+    double eliteFValue;
+    double genMinFValue;
+    double genAveFValue;
+    double genDevFValue;
+};
+
+// for storing the f-value of every individual in the group
+double indFValInfo[POP_SIZE][numSets + 1];
+int curMaxFvalIdx = 0;
+double curThreshFVal = 3.00;
+
+void imgShow(const string& name, const Mat& img) {
+    imshow(name, img);
+    waitKey(0);
+    destroyAllWindows();
+}
+
+shared_ptr<TreeNode> cloneTree(const shared_ptr<TreeNode>& node) {
+    if (!node) return nullptr;
+    auto newNode = make_shared<TreeNode>();
+    newNode->type = node->type;
+    newNode->params = node->params;
+    for (auto& c : node->children) newNode->children.push_back(cloneTree(c));
+    return newNode;
+}
+
+// =====================================================
+// Gray code utilities
+// =====================================================
+inline int binaryToGray(int num) { return num ^ (num >> 1); }
+inline int grayToBinary(int num) {
+    for (int mask = num >> 1; mask != 0; mask >>= 1) num ^= mask;
+    return num;
+}
+inline string intToBits(int n, int bits = 8) {
+    string s(bits, '0');
+    for (int i = bits - 1; i >= 0; --i) s[i] = (n & 1) + '0', n >>= 1;
+    return s;
+}
+inline int bitsToInt(const string& s) {
+    int val = 0;
+    for (char c : s) val = (val << 1) | (c - '0');
+    return val;
+}
+inline string grayEncode(double val, double minv, double maxv, int bits = 8) {
+    double norm = (val - minv) / (maxv - minv);
+    norm = max(0.0, min(1.0, norm));
+    int bin = int(norm * ((1 << bits) - 1));
+    return intToBits(binaryToGray(bin), bits);
+}
+inline double grayDecode(const string& gray, double minv, double maxv, int bits = 8) {
+    int bin = grayToBinary(bitsToInt(gray));
+    double norm = double(bin) / ((1 << bits) - 1);
+    return minv + norm * (maxv - minv);
+}
+inline string mutateGrayBits(string s, double rate = 0.01) {
+    for (auto& c : s)
+        if (prob(rng) < rate) c = (c == '0' ? '1' : '0');
+    return s;
+}
+
+shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = MAX_DEPTH) {
+    if (depth >= maxDepth || prob(rng) < 0.1) {
+        auto t = make_shared<TreeNode>();
+        t->type = TERMINAL_INPUT;
+        return t;
+    }
+    FilterType t = static_cast<FilterType>(1 + (rng() % NUM_TYPE_FUNC));
+    auto node = make_shared<TreeNode>();
+    node->type = t;
+
+    if (g_paramDesc.count(t)) {
+        auto pd = g_paramDesc[t];
+        node->params.resize(pd.n);
+        for (int i = 0; i < pd.n; i++) {
+            uniform_real_distribution<> ud(pd.minv, pd.maxv);
+            node->params[i] = ud(rng);
+        }
+    }
+    int numChildren = (t == BITWISE_AND || t == BITWISE_OR || t == BITWISE_XOR || t == DIFF_PROCESS) ? 2 : 1;
+    for (int i = 0; i < numChildren; i++) node->children.push_back(generateRandomTree(depth + 1, maxDepth));
+    return node;
+}
+*/
