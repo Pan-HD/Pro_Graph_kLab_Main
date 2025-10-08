@@ -411,7 +411,6 @@ int main() {
     return 0;
 }
 
-
 /*
 #include <stdio.h>
 #include <string.h>
@@ -472,23 +471,23 @@ enum FilterType { // type-terminal and type-function
 
 struct ParamDesc {
     int n;
-    //double minv;
-    //double maxv;
-    int minv;
-    int maxv;
+    double minv;
+    double maxv;
+    //int minv;
+    //int maxv;
 };
 unordered_map<FilterType, ParamDesc> g_paramDesc;
 
 void initParamDesc() {
-    g_paramDesc[GAUSSIAN_BLUR] = { 2, 1, 31 };
-    g_paramDesc[MED_BLUR] = { 1, 1, 31 };
-    g_paramDesc[BLUR] = { 1, 1, 31 };
-    g_paramDesc[BILATERAL_FILTER] = { 3, 1, 150 };
-    g_paramDesc[CANNY] = { 2, 1, 255 };
-    g_paramDesc[THRESHOLD] = { 1, 0, 255 };
-    g_paramDesc[ERODE] = { 1, 0, 5 };
-    g_paramDesc[DILATE] = { 1, 0, 5 };
-    g_paramDesc[CON_PRO_SINGLE_TIME] = { 3, 0, 15 };
+    g_paramDesc[GAUSSIAN_BLUR] = { 2, 1.0, 31.0 };
+    g_paramDesc[MED_BLUR] = { 1, 1.0, 31.0 };
+    g_paramDesc[BLUR] = { 1, 1.0, 31.0 };
+    g_paramDesc[BILATERAL_FILTER] = { 3, 1.0, 150.0 };
+    g_paramDesc[CANNY] = { 2, 1.0, 255.0 };
+    g_paramDesc[THRESHOLD] = { 1, 0.0, 255.0 };
+    g_paramDesc[ERODE] = { 1, 0.0, 5.0 };
+    g_paramDesc[DILATE] = { 1, 0.0, 5.0 };
+    g_paramDesc[CON_PRO_SINGLE_TIME] = { 3, 0.0, 15.0 };
 }
 
 struct TreeNode {
@@ -582,4 +581,5 @@ shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = MAX_DEPTH)
     for (int i = 0; i < numChildren; i++) node->children.push_back(generateRandomTree(depth + 1, maxDepth));
     return node;
 }
+
 */
