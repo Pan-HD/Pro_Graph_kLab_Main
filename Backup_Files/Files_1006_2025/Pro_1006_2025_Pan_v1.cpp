@@ -454,27 +454,21 @@ enum FilterType { // type-terminal and type-function
     SOBEL_X,
     SOBEL_Y,
     CANNY,
-    DIFF_PROCESS,
-    //THRESHOLD_9,
-    //THRESHOLD_31,
-    //THRESHOLD_63,
-    //THRESHOLD_127,
     THRESHOLD,
     ERODE,
     DILATE,
-    CON_PRO_SINGLE_TIME,
     BITWISE_AND,
     BITWISE_OR,
     BITWISE_NOT,
     BITWISE_XOR,
+    DIFF_PROCESS,
+    CON_PRO_SINGLE_TIME,
 };
 
 struct ParamDesc {
     int n;
     double minv;
     double maxv;
-    //int minv;
-    //int maxv;
 };
 unordered_map<FilterType, ParamDesc> g_paramDesc;
 
@@ -527,32 +521,71 @@ shared_ptr<TreeNode> cloneTree(const shared_ptr<TreeNode>& node) {
 // =====================================================
 // Gray code utilities
 // =====================================================
+
+/*
+  Turn bin to gray -> Convert a regular integer into an integer that can be interpreted as a Gray code.
+  Eg: 3 -> 0011(bin) -> 0010(gray) -> 2
+*/
 inline int binaryToGray(int num) { return num ^ (num >> 1); }
+
+/*
+  Turn gray to bin -> Convert an integer that can be interpreted as a Gray code into a regular integer.
+  Eg: 2 -> 0010(gray) -> 0011(bin) -> 3
+*/
 inline int grayToBinary(int num) {
     for (int mask = num >> 1; mask != 0; mask >>= 1) num ^= mask;
     return num;
 }
+
+/*
+  Convert the integer n into a binary string of length bits.
+  intToBits(5, 8) ¡ú "00000101"
+*/
 inline string intToBits(int n, int bits = 8) {
     string s(bits, '0');
     for (int i = bits - 1; i >= 0; --i) s[i] = (n & 1) + '0', n >>= 1;
     return s;
 }
+
+/*
+  Convert a binary string of length bits into the integer n
+  "00000101" ¡ú intToBits(5, 8)
+*/
 inline int bitsToInt(const string& s) {
     int val = 0;
     for (char c : s) val = (val << 1) | (c - '0');
     return val;
 }
+
+/*
+  Map a real-valued parameter (e.g., ¦Ò = 1.2) to a Gray-coded binary string.
+  -> (1.2 - 0.0)/(5.0 - 0.0) = 0.24
+  -> 0.24 * 255(2^8 - 1) ¡Ö 61
+  -> binaryToGray(61) ¡ú 111101 ¡ú 100011(gray) ¡ú 35(gray)
+  -> intToBits(35, 8) ¡ú "00100011"
+*/
 inline string grayEncode(double val, double minv, double maxv, int bits = 8) {
     double norm = (val - minv) / (maxv - minv);
     norm = max(0.0, min(1.0, norm));
     int bin = int(norm * ((1 << bits) - 1));
     return intToBits(binaryToGray(bin), bits);
 }
+
+/*
+  Decode the Gray code back into the corresponding real-valued parameter.
+  -> grayDecode("00111101", 0.0, 5.0)¡¡¡ú¡¡61(bin)¡¡
+  ¡¡ ¡ú¡¡norm = 61 / 255 ¡Ö 0.239¡¡¡ú¡¡val = 0 + 0.239*5 = 1.195
+*/
 inline double grayDecode(const string& gray, double minv, double maxv, int bits = 8) {
     int bin = grayToBinary(bitsToInt(gray));
     double norm = double(bin) / ((1 << bits) - 1);
     return minv + norm * (maxv - minv);
 }
+
+/*
+  Randomly flip certain bits in the Gray-coded string with a probability of rate (genetic mutation).
+  "00110110(gray)" -> "00111110(gray)"
+*/
 inline string mutateGrayBits(string s, double rate = 0.01) {
     for (auto& c : s)
         if (prob(rng) < rate) c = (c == '0' ? '1' : '0');
@@ -570,9 +603,11 @@ shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = MAX_DEPTH)
     node->type = t;
 
     if (g_paramDesc.count(t)) {
+        // pd -> { numParam, minVal, maxVal }
         auto pd = g_paramDesc[t];
         node->params.resize(pd.n);
         for (int i = 0; i < pd.n; i++) {
+            // Create a random number generator that returns values uniformly distributed over the interval [minv, maxv].
             uniform_real_distribution<> ud(pd.minv, pd.maxv);
             node->params[i] = ud(rng);
         }
@@ -582,4 +617,136 @@ shared_ptr<TreeNode> generateRandomTree(int depth = 0, int maxDepth = MAX_DEPTH)
     return node;
 }
 
+Mat executeTree(shared_ptr<TreeNode> node, const Mat& input) {
+    if (!node) return input;
+    switch (node->type) {
+    case TERMINAL_INPUT:
+        return input.clone();
+    case GAUSSIAN_BLUR: {
+        int k = int(node->params[0]) | 1;
+        Mat dst;
+        GaussianBlur(executeTree(node->children[0], input), dst, Size(k, k), node->params[1]);
+        return dst;
+    }
+    case MED_BLUR: {
+        int k = int(node->params[0]) | 1;
+        Mat dst;
+        medianBlur(executeTree(node->children[0], input), dst, k);
+        return dst;
+    }
+    case BLUR: {
+        int k = int(node->params[0]) | 1;
+        Mat dst;
+        blur(executeTree(node->children[0], input), dst, Size(k, k));
+        return dst;
+    }
+    case BILATERAL_FILTER: {
+        Mat dst;
+        bilateralFilter(executeTree(node->children[0], input), dst,
+            int(node->params[0]), node->params[1], node->params[2]);
+        return dst;
+    }
+    case SOBEL_X: {
+        Mat dst;
+        Sobel(executeTree(node->children[0], input), dst, CV_8U, 1, 0);
+        return dst;
+    }
+    case SOBEL_Y: {
+        Mat dst;
+        Sobel(executeTree(node->children[0], input), dst, CV_8U, 0, 1);
+        return dst;
+    }
+    case CANNY: {
+        Mat dst;
+        Canny(executeTree(node->children[0], input), dst, node->params[0], node->params[1]);
+        return dst;
+    }
+    case THRESHOLD: {
+        Mat dst;
+        threshold(executeTree(node->children[0], input), dst, node->params[0], 255, THRESH_BINARY);
+        return dst;
+    }
+    case ERODE: {
+        Mat dst;
+        Mat kernel = getStructuringElement(MORPH_RECT, Size(1 + 2 * int(node->params[0]), 1 + 2 * int(node->params[0])));
+        erode(executeTree(node->children[0], input), dst, kernel);
+        return dst;
+    }
+    case DILATE: {
+        Mat dst;
+        Mat kernel = getStructuringElement(MORPH_RECT, Size(1 + 2 * int(node->params[0]), 1 + 2 * int(node->params[0])));
+        dilate(executeTree(node->children[0], input), dst, kernel);
+        return dst;
+    }
+    case BITWISE_AND: {
+        Mat dst;
+        bitwise_and(executeTree(node->children[0], input), executeTree(node->children[1], input), dst);
+        return dst;
+    }
+    case BITWISE_OR: {
+        Mat dst;
+        bitwise_or(executeTree(node->children[0], input), executeTree(node->children[1], input), dst);
+        return dst;
+    }
+    case BITWISE_XOR: {
+        Mat dst;
+        bitwise_xor(executeTree(node->children[0], input), executeTree(node->children[1], input), dst);
+        return dst;
+    }
+    case BITWISE_NOT: {
+        Mat dst;
+        bitwise_not(executeTree(node->children[0], input), dst);
+        return dst;
+    }
+    case DIFF_PROCESS: {
+        int absoluteFlag = 0;
+        Mat dst = Mat::zeros(Size(input.cols, input.rows), CV_8UC1);
+        for (int j = 0; j < input.rows; j++)
+        {
+            for (int i = 0; i < input.cols; i++) {
+                int diffVal = executeTree(node->children[0], input).at<uchar>(j, i) - executeTree(node->children[1], input).at<uchar>(j, i);
+                if (diffVal < 0) {
+                    if (absoluteFlag != 0) {
+                        diffVal = abs(diffVal);
+                    }
+                    else {
+                        diffVal = 0;
+                    }
+                }
+                dst.at<uchar>(j, i) = diffVal;
+            }
+        }
+        return dst;
+    }
+    case CON_PRO_SINGLE_TIME: {
+        Mat dst = Mat::zeros(input.size(), CV_8UC1);
+        Mat maskImg = executeTree(node->children[0], input).clone();
+        Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+        for (int idxET = 0; idxET < (int)(node->params[0]); idxET++) {
+            erode(maskImg, maskImg, kernel);
+        }
+        vector<vector<Point>> contours;
+        findContours(maskImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+        Mat mask = Mat::zeros(maskImg.size(), CV_8UC1);
+        for (const auto& contour : contours) {
+            Rect bounding_box = boundingRect(contour);
+            double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+            if ((aspect_ratio <= (1 - (int)(node->params[1]) * 0.1) || aspect_ratio > (1 + (int)(node->params[1]) * 0.1)) && cv::contourArea(contour) < 100 * (int)(node->params[2])) {
+                drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+            }
+        }
+        for (int y = 0; y < dst.rows; y++) {
+            for (int x = 0; x < dst.cols; x++) {
+                if (mask.at<uchar>(y, x) == 255) {
+                    dst.at<uchar>(y, x) = 255;
+                }
+            }
+        }
+        return dst;
+    }
+    default:
+        return input.clone();
+    }
+}
 */
+
