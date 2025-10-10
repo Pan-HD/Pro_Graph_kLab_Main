@@ -748,5 +748,120 @@ Mat executeTree(shared_ptr<TreeNode> node, const Mat& input) {
         return input.clone();
     }
 }
+
+using NodeWithParent = pair<shared_ptr<TreeNode>, shared_ptr<TreeNode>>;
+
+void collectNodesWithParents(const shared_ptr<TreeNode>& node,
+    const shared_ptr<TreeNode>& parent,
+    vector<NodeWithParent>& result) {
+    if (!node) return;
+    result.emplace_back(node, parent);
+    for (auto& child : node->children) {
+        collectNodesWithParents(child, node, result);
+    }
+}
+
+bool isTerminal(FilterType type) {
+    return (type == TERMINAL_INPUT);
+}
+
+bool isBinaryFilter(FilterType type) {
+    return (type == DIFF_PROCESS || type == BITWISE_AND || type == BITWISE_OR || type == BITWISE_XOR);
+}
+
+int getTreeMaxDepth(const std::shared_ptr<TreeNode>& node, int depth = 0) {
+    if (!node) return depth;
+    if (node->children.empty()) return depth;
+    int maxChildDepth = depth;
+    for (auto& child : node->children) {
+        maxChildDepth = std::max(maxChildDepth, getTreeMaxDepth(child, depth + 1));
+    }
+    return maxChildDepth;
+}
+
+/*
+    Function:
+    (1) Adjust the children for type
+    (2) Limit the max-depth of the tree
 */
+void adjustChildrenForType(shared_ptr<TreeNode>& node, int currentDepth, int maxDepth, int overFlag = 0) {
+    int remainingDepth = maxDepth - currentDepth;
+    if (isTerminal(node->type)) {
+        node->children.clear();
+    }
+    else {
+        // if the remainingDepth go down to 1, the child node of current node can only been set to the terminal node
+        if (remainingDepth <= 1) {
+            // 01 - cleanning the children array
+            node->children.clear();
+            // 02 - set push back times and judge the type of the node, if isBinaryFilter, change the times
+            int cntPushBack = 1;
+            if (isBinaryFilter(node->type)) {
+                cntPushBack = 2;
+            }
+            // 03 - push back with the TERMINAL_INPUT
+            for (int idx = 0; idx < cntPushBack; idx++) {
+                node->children.push_back(make_shared<TreeNode>(TreeNode{ TERMINAL_INPUT, {} }));
+            }
+        }
+        else {
+            int requiredChildren = isBinaryFilter(node->type) ? 2 : 1;
+            // current tree with over-depth, needs to cut down the branch
+            if (overFlag) node->children.clear();
+            while ((int)node->children.size() < requiredChildren) {
+                node->children.push_back(generateRandomTree(currentDepth + 1, maxDepth));
+            }
+            while ((int)node->children.size() > requiredChildren) {
+                node->children.pop_back();
+            }
+        }
+    }
+}
+
+void confirmDepth(shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
+    int finalDepth = getTreeMaxDepth(root);
+    if (finalDepth > maxDepth) {
+        adjustChildrenForType(root, 0, maxDepth, 1);
+    }
+}
+
+void crossover(shared_ptr<TreeNode>& a, shared_ptr<TreeNode>& b) {
+    vector<NodeWithParent> nodesA, nodesB;
+    collectNodesWithParents(a, nullptr, nodesA);
+    collectNodesWithParents(b, nullptr, nodesB);
+
+    vector<NodeWithParent> validA, validB;
+    for (const auto& np : nodesA) {
+        if (np.second) validA.push_back(np);
+    }
+    for (const auto& np : nodesB) {
+        if (np.second) validB.push_back(np);
+    }
+    // Crossover only works on the situation: except root node, any child node exists.
+    if (validA.empty() || validB.empty()) return;
+
+    int idxA = rng() % validA.size();
+    int idxB = rng() % validB.size();
+
+    shared_ptr<TreeNode> nodeA = validA[idxA].first;
+    shared_ptr<TreeNode> parentA = validA[idxA].second;
+
+    shared_ptr<TreeNode> nodeB = validB[idxB].first;
+    shared_ptr<TreeNode> parentB = validB[idxB].second;
+
+    auto& childrenA = parentA->children;
+    auto itA = find(childrenA.begin(), childrenA.end(), nodeA);
+
+    auto& childrenB = parentB->children;
+    auto itB = find(childrenB.begin(), childrenB.end(), nodeB);
+
+    if (itA != childrenA.end() && itB != childrenB.end()) {
+        swap(*itA, *itB);
+    }
+
+    confirmDepth(a);
+    confirmDepth(b);
+}
+*/
+
 
