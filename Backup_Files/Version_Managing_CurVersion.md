@@ -63,14 +63,17 @@
       - ```BcpFiles -> Files_0815_2025 -> ..._v1```
         - Version-2.0
       - ```BcpFiles -> Files_0820_2025 -> ..._v1```
-        - **Version-3.0**
-        - **Waiting for report・・・**
+        - Version-3.0
+      - ```BcpFiles -> Files_1017_2025 -> ..._v1```
+        - **Version-4.0**
+        - **Processing**
     - **Memo**
       - Program Bug　ー＞　When running time been set to { 2, 3, 4, ... }, The resImg and output f1-score is not matched
         - Wait to resolve
   - GP + GA
     - ```BcpFiles -> Files_1006_2025 -> ..._v1```
-      - **Version-4.0**
+      - **Version-1.0**
+      - **TESTING BRANCH**
 - P5 - ELSE
   - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v1.py```
