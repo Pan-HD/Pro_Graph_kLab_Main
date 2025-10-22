@@ -11,15 +11,15 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 3
+#define sysRunTimes 1
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
-#define POP_SIZE 100
+#define POP_SIZE 200 // 100 -> 200
 #define GENERATIONS 10000
-#define OFFSPRING_COUNT 16
+#define OFFSPRING_COUNT 32 // 16 -> 32
 #define MUTATION_RATE 0.9
 #define NUM_TYPE_FUNC 19
-#define MAX_DEPTH 10 // { 0, 1, 2, ... }
+#define MAX_DEPTH 12 // { 0, 1, 2, ... }, 10 -> 12
 
 void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
@@ -495,7 +495,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 				if (d != -1) return d;
 			}
 			return -1;
-		};
+			};
 		currentDepth = findDepth(root, 0);
 	}
 
@@ -506,7 +506,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 		else {
 			targetParent->children[static_cast<size_t>(idxTargetInParent)] = repl;
 		}
-	};
+		};
 
 	int mutationType = rng() % 3;
 
