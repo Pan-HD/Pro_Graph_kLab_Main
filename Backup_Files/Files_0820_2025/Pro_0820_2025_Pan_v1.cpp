@@ -812,7 +812,7 @@ void multiProcess(Mat imgArr[][2]) {
 			Mat res;
 
 			for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-				if ((idxGen + 1) % 10 == 0) {
+				if ((idxGen + 1) % 1000 == 0) {
 					for (int idxSet = 0; idxSet < numSets; idxSet++) {
 						resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
 						sprintf_s(imgName_pro[idxSet], "./imgs_0820_2025_v1/output/img_0%d/Gen-%d-t%d.png", idxSet + 1, idxGen + 1, idxProTimes + 1);
