@@ -14,12 +14,12 @@ using namespace cv;
 #define sysRunTimes 1
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
-#define POP_SIZE 100
+#define POP_SIZE 200 // 100 -> 200
 #define GENERATIONS 10000
-#define OFFSPRING_COUNT 16
+#define OFFSPRING_COUNT 20 // 16 -> 20
 #define MUTATION_RATE 0.9
-#define NUM_TYPE_FUNC 19
-#define MAX_DEPTH 10 // { 0, 1, 2, ... }
+#define NUM_TYPE_FUNC 21
+#define MAX_DEPTH 12 // { 0, 1, 2, ... } // 10 -> 12
 
 void imgShow(const string& name, const Mat& img);
 void multiProcess(Mat imgArr[][2]);
@@ -38,8 +38,10 @@ enum FilterType { // type-terminal and type-function
 	THRESHOLD_31,
 	THRESHOLD_63,
 	THRESHOLD_127,
-	ERODE,
-	DILATE,
+	ERODE_3,
+	DILATE_3,
+	ERODE_5,
+	DILATE_5,
 	CON_PRO_SINGLE_TIME,
 	BITWISE_AND,
 	BITWISE_OR,
@@ -72,8 +74,8 @@ int main(void) {
 	char inputPathName_tar[256];
 
 	if (numSets == 1) {
-		sprintf_s(inputPathName_ori, "./imgs_0820_2025_v1/input/oriImg_0%d.png", idSet);
-		sprintf_s(inputPathName_tar, "./imgs_0820_2025_v1/input/tarImg_0%d.png", idSet);
+		sprintf_s(inputPathName_ori, "./imgs_1017_2025_v1/input/oriImg_0%d.png", idSet);
+		sprintf_s(inputPathName_tar, "./imgs_1017_2025_v1/input/tarImg_0%d.png", idSet);
 		for (int j = 0; j < 2; j++) {
 			if (j == 0) {
 				imgArr[0][j] = imread(inputPathName_ori, 0);
@@ -85,8 +87,8 @@ int main(void) {
 	}
 	else {
 		for (int i = 0; i < numSets; i++) {
-			sprintf_s(inputPathName_ori, "./imgs_0820_2025_v1/input/oriImg_0%d.png", i + 1);
-			sprintf_s(inputPathName_tar, "./imgs_0820_2025_v1/input/tarImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_ori, "./imgs_1017_2025_v1/input/oriImg_0%d.png", i + 1);
+			sprintf_s(inputPathName_tar, "./imgs_1017_2025_v1/input/tarImg_0%d.png", i + 1);
 			for (int j = 0; j < 2; j++) {
 				if (j == 0) {
 					imgArr[i][j] = imread(inputPathName_ori, 0);
@@ -263,44 +265,52 @@ Mat dilateFunc_5(const Mat& img) {
 	return out;
 }
 
-// adding-01
-Mat createZeroImg(const Mat& img) {
-	Mat out = Mat::zeros(img.size(), CV_8UC1);
-	return out;
-}
-
-// adding-02
-Mat cloneImg(const Mat& img) {
-	Mat out = img.clone();
-	return out;
-}
-
-Mat conPro_singleTime(const Mat& img) {
-	Mat out = Mat::zeros(img.size(), CV_8UC1);
-	Mat maskImg = img.clone();
-	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
-	for (int idxET = 0; idxET < 3; idxET++) {
-		erode(maskImg, maskImg, kernel);
-	}
+/*
+  Only area is the limiting factor
+  Ideal conditions: input(black hole with white background) -> output(filtered white hole with black background)
+*/
+Mat findContourFunc(const Mat& img) {
 	vector<vector<Point>> contours;
-	findContours(maskImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
-	Mat mask = Mat::zeros(maskImg.size(), CV_8UC1);
+	findContours(img, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+	Mat out = Mat::zeros(img.size(), CV_8UC1);
 	for (const auto& contour : contours) {
-		Rect bounding_box = boundingRect(contour);
-		double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
-		if ((aspect_ratio <= (1 - 1 * 0.1) || aspect_ratio > (1 + 1 * 0.1)) && cv::contourArea(contour) < 100 * 2) {
-			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
-		}
-	}
-	for (int y = 0; y < out.rows; y++) {
-		for (int x = 0; x < out.cols; x++) {
-			if (mask.at<uchar>(y, x) == 255) {
-				out.at<uchar>(y, x) = 255;
-			}
+		//Rect bounding_box = boundingRect(contour);
+		//double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+		if (cv::contourArea(contour) > 100 * 2) {
+			drawContours(out, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
 		}
 	}
 	return out;
 }
+
+//Mat conPro_singleTime(const Mat& img) {
+//	Mat out = Mat::zeros(img.size(), CV_8UC1);
+//	Mat maskImg = img.clone();
+//	Mat kernel = getStructuringElement(MORPH_ELLIPSE, Size(5, 5));
+//	for (int idxET = 0; idxET < 3; idxET++) {
+//		erode(maskImg, maskImg, kernel);
+//	}
+//	//
+//	vector<vector<Point>> contours;
+//	findContours(maskImg, contours, RETR_LIST, CHAIN_APPROX_SIMPLE);
+//	Mat mask = Mat::zeros(maskImg.size(), CV_8UC1);
+//	for (const auto& contour : contours) {
+//		Rect bounding_box = boundingRect(contour);
+//		double aspect_ratio = static_cast<double>(bounding_box.width) / bounding_box.height;
+//		if ((aspect_ratio <= (1 - 1 * 0.1) || aspect_ratio > (1 + 1 * 0.1)) && cv::contourArea(contour) < 100 * 2) {
+//			drawContours(mask, vector<vector<Point>>{contour}, -1, Scalar(255), -1);
+//		}
+//	}
+//	//
+//	for (int y = 0; y < out.rows; y++) {
+//		for (int x = 0; x < out.cols; x++) {
+//			if (mask.at<uchar>(y, x) == 255) {
+//				out.at<uchar>(y, x) = 255;
+//			}
+//		}
+//	}
+//	return out;
+//}
 
 Mat bitWiseAndFunc(const Mat postImg, const Mat preImg) {
 	Mat out;
@@ -354,12 +364,16 @@ Mat executeTree(const shared_ptr<TreeNode>& node, Mat& input) { // ind-tree, img
 		return threshFunc_63(executeTree(node->children[0], input));
 	case THRESHOLD_127:
 		return threshFunc_127(executeTree(node->children[0], input));
-	case ERODE:
-		return erodeFunc(executeTree(node->children[0], input));
-	case DILATE:
-		return dilateFunc(executeTree(node->children[0], input));
+	case ERODE_3:
+		return erodeFunc_3(executeTree(node->children[0], input));
+	case DILATE_3:
+		return dilateFunc_3(executeTree(node->children[0], input));
+	case ERODE_5:
+		return erodeFunc_5(executeTree(node->children[0], input));
+	case DILATE_5:
+		return dilateFunc_5(executeTree(node->children[0], input));
 	case CON_PRO_SINGLE_TIME:
-		return conPro_singleTime(executeTree(node->children[0], input));
+		return findContourFunc(executeTree(node->children[0], input));
 	case BITWISE_AND:
 		return bitWiseAndFunc(executeTree(node->children[0], input), executeTree(node->children[1], input));
 	case BITWISE_OR:
@@ -521,7 +535,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 				if (d != -1) return d;
 			}
 			return -1;
-			};
+		};
 		currentDepth = findDepth(root, 0);
 	}
 
@@ -532,7 +546,7 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 		else {
 			targetParent->children[static_cast<size_t>(idxTargetInParent)] = repl;
 		}
-		};
+	};
 
 	int mutationType = rng() % 3;
 
@@ -701,8 +715,10 @@ string filterTypeToString(FilterType type) {
 	case THRESHOLD_31:       return "THRESHOLD_31";
 	case THRESHOLD_63:       return "THRESHOLD_63";
 	case THRESHOLD_127:      return "THRESHOLD_127";
-	case ERODE:              return "ERODE";
-	case DILATE:             return "DILATE";
+	case ERODE_3:              return "ERODE_3";
+	case DILATE_3:             return "DILATE_3";
+	case ERODE_5:              return "ERODE_5";
+	case DILATE_5:             return "DILATE_5";
 	case CON_PRO_SINGLE_TIME:return "CON_PRO_SINGLE_TIME";
 	case BITWISE_AND:        return "BITWISE_AND";
 	case BITWISE_OR:         return "BITWISE_OR";
@@ -733,7 +749,7 @@ void multiProcess(Mat imgArr[][2]) {
 
 	// for recording the f_value of every generation (max, min, ave, dev)
 	FILE* fl_fValue = nullptr;
-	errno_t err = fopen_s(&fl_fValue, "./imgs_0820_2025_v1/output/f_value.txt", "w");
+	errno_t err = fopen_s(&fl_fValue, "./imgs_1017_2025_v1/output/f_value.txt", "w");
 	if (err != 0 || fl_fValue == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -741,14 +757,14 @@ void multiProcess(Mat imgArr[][2]) {
 
 	// for recording the f_value of elite-ind in last gen (setX1, setX2, ..., Max)
 	FILE* fl_maxFval = nullptr;
-	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_0820_2025_v1/output/maxFvalInfo_final.txt", "w");
+	errno_t err2 = fopen_s(&fl_maxFval, "./imgs_1017_2025_v1/output/maxFvalInfo_final.txt", "w");
 	if (err2 != 0 || fl_maxFval == nullptr) {
 		perror("Cannot open the file");
 		return;
 	}
 
 	FILE* fl_printTree = nullptr;
-	errno_t err3 = fopen_s(&fl_printTree, "./imgs_0820_2025_v1/output/printed_tree.txt", "w");
+	errno_t err3 = fopen_s(&fl_printTree, "./imgs_1017_2025_v1/output/printed_tree.txt", "w");
 	if (err3 != 0 || fl_printTree == nullptr) {
 		perror("Cannot open the file");
 		return;
@@ -838,15 +854,15 @@ void multiProcess(Mat imgArr[][2]) {
 			Mat res;
 
 			for (int idxGen = 0; idxGen < GENERATIONS; idxGen++) {
-				if ((idxGen + 1) % 10 == 0) {
+				if ((idxGen + 1) % 1000 == 0) {
 					for (int idxSet = 0; idxSet < numSets; idxSet++) {
 						resImg_02 = executeTree(genInfo[idxGen].eliteTree, imgArr[idxSet][0]);
-						sprintf_s(imgName_pro[idxSet], "./imgs_0820_2025_v1/output/img_0%d/Gen-%d-t%d.png", idxSet + 1, idxGen + 1, idxProTimes + 1);
+						sprintf_s(imgName_pro[idxSet], "./imgs_1017_2025_v1/output/img_0%d/Gen-%d-t%d.png", idxSet + 1, idxGen + 1, idxProTimes + 1);
 						imwrite(imgName_pro[idxSet], resImg_02);
 						if (idxGen == GENERATIONS - 1) {
 							vector<Mat> images = { resImg_02, imgArr[idxSet][1] };
 							hconcat(images, res);
-							sprintf_s(imgName_final[idxSet], "./imgs_0820_2025_v1/output/img_0%d/imgs_final-t%d.png", idxSet + 1, idxProTimes + 1);
+							sprintf_s(imgName_final[idxSet], "./imgs_1017_2025_v1/output/img_0%d/imgs_final-t%d.png", idxSet + 1, idxProTimes + 1);
 							imwrite(imgName_final[idxSet], res);
 						}
 					}
