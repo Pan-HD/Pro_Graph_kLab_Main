@@ -19,7 +19,7 @@ using namespace cv;
 #define OFFSPRING_COUNT 16 // OFFSPRING_COUNT of GP
 #define MUTATION_RATE 0.9 // GP
 #define NUM_TYPE_FUNC 16 // GP
-#define MAX_DEPTH 10 // { 0, 1, 2, ... } GP
+#define MAX_DEPTH 3 // { 0, 1, 2, ... } GP
 #define ENABLE_GA true
 #define GA_POP 10
 #define GA_GENERATIONS 10
@@ -63,16 +63,16 @@ struct ParamDesc { // describle of params
 unordered_map<FilterType, ParamDesc> g_paramDesc; // <type, desc of params>
 
 void initParamDesc() {
-    g_paramDesc[GAUSSIAN_BLUR] = { 2, 1.0, 31.0 }; // ｡ﾌ
-    g_paramDesc[MED_BLUR] = { 1, 1.0, 31.0 }; // ｡ﾌ
-    g_paramDesc[BLUR] = { 1, 1.0, 31.0 }; // ｡ﾌ
-    g_paramDesc[BILATERAL_FILTER] = { 3, 1.0, 150.0 }; // ｡ﾌ
-    g_paramDesc[SOBEL_X] = { 1, 1.0, 7.0 }; // ｡ﾌ
-    g_paramDesc[SOBEL_Y] = { 1, 1.0, 7.0 }; // ｡ﾌ
-    g_paramDesc[CANNY] = { 2, 1.0, 255.0 }; // ｡ﾌ
-    g_paramDesc[THRESHOLD] = { 1, 0.0, 255.0 }; // ｡ﾌ
-    g_paramDesc[ERODE] = { 1, 0.0, 5.0 }; // ｡ﾌ { 1, 3, ..., 11 }
-    g_paramDesc[DILATE] = { 1, 0.0, 5.0 }; // ｡ﾌ { 1, 3, ..., 11 }
+    g_paramDesc[GAUSSIAN_BLUR] = { 2, 1.0, 31.0 };
+    g_paramDesc[MED_BLUR] = { 1, 1.0, 31.0 };
+    g_paramDesc[BLUR] = { 1, 1.0, 31.0 };
+    g_paramDesc[BILATERAL_FILTER] = { 3, 1.0, 150.0 };
+    g_paramDesc[SOBEL_X] = { 1, 1.0, 7.0 };
+    g_paramDesc[SOBEL_Y] = { 1, 1.0, 7.0 };
+    g_paramDesc[CANNY] = { 2, 1.0, 255.0 };
+    g_paramDesc[THRESHOLD] = { 1, 0.0, 255.0 };
+    g_paramDesc[ERODE] = { 1, 0.0, 5.0 };
+    g_paramDesc[DILATE] = { 1, 0.0, 5.0 };
     g_paramDesc[CONTOUR_PROCESS] = { 5, 0.0, 15.0 };
 }
 
@@ -260,19 +260,16 @@ Mat executeTree(shared_ptr<TreeNode> node, const Mat& input) {
         return dst;
     }
     case DIFF_PROCESS: {
-        // int absoluteFlag = 0;
         Mat dst = Mat::zeros(Size(input.cols, input.rows), CV_8UC1);
+        Mat postImg = executeTree(node->children[0], input);
+        Mat preImg = executeTree(node->children[1], input);
         for (int j = 0; j < input.rows; j++)
         {
             for (int i = 0; i < input.cols; i++) {
-                int diffVal = executeTree(node->children[0], input).at<uchar>(j, i) - executeTree(node->children[1], input).at<uchar>(j, i);
+                // int diffVal = executeTree(node->children[0], input).at<uchar>(j, i) - executeTree(node->children[1], input).at<uchar>(j, i);
+
+                int diffVal = postImg.at<uchar>(j, i) - preImg.at<uchar>(j, i);
                 if (diffVal < 0) {
-                    //if (absoluteFlag != 0) {
-                    //    diffVal = abs(diffVal);
-                    //}
-                    //else {
-                    //    diffVal = 0;
-                    //}
                     diffVal = 0;
                 }
                 dst.at<uchar>(j, i) = diffVal;
@@ -522,7 +519,8 @@ void mutate(std::shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
 
     auto replaceInParent = [&](const shared_ptr<TreeNode>& repl) {
         if (!targetParent) {
-            root = repl;
+            // root = repl;
+            root = cloneTree(repl);
         }
         else {
             targetParent->children[static_cast<size_t>(idxTargetInParent)] = repl;
@@ -938,14 +936,15 @@ void multiProcess(Mat imgArr[][2]) {
 
             cout << "ENTER-01" << endl;
             double score1 = calScoreByInd(parent1, imgArr, -1);
-            double score2 = calScoreByInd(parent2, imgArr, -1);
             cout << "ENTER-02" << endl;
+            double score2 = calScoreByInd(parent2, imgArr, -1);
+            cout << "ENTER-03" << endl;
 
 
             family.push_back({ score1, parent1 });
             family.push_back({ score2, parent2 });
 
-
+            cout << "ENTER-04" << endl;
 
             for (int k = 0; k < OFFSPRING_COUNT; ++k) {
                 auto childA = cloneTree(parent1);
@@ -956,6 +955,8 @@ void multiProcess(Mat imgArr[][2]) {
                 family.push_back({ fit, chosen });
             }
 
+            cout << "ENTER-05" << endl;
+
             for (int idxInd = 0; idxInd < (OFFSPRING_COUNT + 2); idxInd++) {
                 if (prob(rng) < MUTATION_RATE) {
                     mutate(family[idxInd].second);
@@ -963,7 +964,7 @@ void multiProcess(Mat imgArr[][2]) {
                 }
             }
 
-
+            cout << "ENTER-06" << endl;
 
             sort(family.rbegin(), family.rend()); // descending sort by f1_score(ind.first)
             auto elite = family[0];

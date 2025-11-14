@@ -72,8 +72,11 @@
         - Wait to resolve
   - GP + GA
     - ```BcpFiles -> Files_1006_2025 -> ..._v1```
-      - **Version-1.0**
-      - **TESTING BRANCH**
+      - Version-1.0
+        - Failed
+    - ```BcpFiles -> Files_1006_2025 -> ..._v2```
+      - Version-2.0
+        - TESTING Branch
 - P5 - ELSE
   - Line-chart generating program
     - ```BcpFiles -> Files_1220 -> ..._v1.py```
