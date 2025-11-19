@@ -31,8 +31,8 @@ using namespace cv;
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 
 // GP parameters
-#define POP_SIZE 10 // Pop_Size of GP
-#define GENERATIONS 10 // Generation of GP
+#define POP_SIZE 100 // Pop_Size of GP
+#define GENERATIONS 5000 // Generation of GP
 #define OFFSPRING_COUNT 16 // OFFSPRING_COUNT of GP
 #define MUTATION_RATE 0.9 // GP
 #define NUM_TYPE_FUNC 16 // GP
@@ -40,8 +40,8 @@ using namespace cv;
 
 // GA parameters
 #define ENABLE_GA true
-#define GA_POP 10
-#define GA_GENERATIONS 10
+#define GA_POP 30
+#define GA_GENERATIONS 100
 #define INITIAL_BIAS_THRESHOLD 0.05
 #define BIAS_DECAY 0.9
 #define BIAS_WINDOW 5
@@ -115,6 +115,21 @@ struct TreeNode {
     vector<shared_ptr<TreeNode>> children;
     vector<double> params;
 };
+
+// =====================================================
+// getCurGenInfo (unchanged logic but uses calScoreByInd)
+// =====================================================
+struct genType {
+    shared_ptr<TreeNode> eliteTree;
+    double eliteFValue;
+    double genMinFValue;
+    double genAveFValue;
+    double genDevFValue;
+};
+
+double indFValInfo[POP_SIZE][numSets + 1];
+int curMaxFvalIdx = 0;
+double curThreshFVal = 3.00;
 
 // clone
 shared_ptr<TreeNode> cloneTree(const shared_ptr<TreeNode>& node) {
@@ -496,50 +511,61 @@ double calculateMetrics(Mat metaImg_g[], Mat tarImg_g[], int numInd) {
         f1_score[idxSet] = calculateF1Score(precision, recall);
     }
     double sum_f1 = 0.0;
+
+    //for (int idxSet = 0; idxSet < numSets; idxSet++) {
+    //    sum_f1 += f1_score[idxSet];
+    //}
+
     for (int idxSet = 0; idxSet < numSets; idxSet++) {
+        if (numInd != -1) { // in the last generation
+            indFValInfo[numInd][idxSet] = f1_score[idxSet];
+        }
         sum_f1 += f1_score[idxSet];
     }
+
+    if (numInd != -1) {
+        indFValInfo[numInd][numSets] = sum_f1;
+    }
+
     // store in indFValInfo externally if needed by caller
     return sum_f1;
 }
-
-double indFValInfo[POP_SIZE][numSets + 1];
-int curMaxFvalIdx = 0;
-double curThreshFVal = 3.00;
 
 // calScoreByInd: execute tree for each set, force binary by thresholding if needed
 double calScoreByInd(const shared_ptr<TreeNode>& node, Mat imgArr[][2], int numInd) {
     Mat tarImg[numSets];
     Mat resImg[numSets];
-    for (int i = 0; i < numSets; i++) tarImg[i] = imgArr[i][1];
 
     for (int i = 0; i < numSets; i++) {
-        Mat out = executeTree(node, imgArr[i][0]);
-        // Force binary: if image is not binary, threshold at 127
-        Mat bin;
-        if (out.type() != CV_8UC1) cvtColor(out, out, COLOR_BGR2GRAY);
-        threshold(out, bin, 127, 255, THRESH_BINARY);
-        resImg[i] = bin;
+        tarImg[i] = imgArr[i][1];
     }
-    double score = calculateMetrics(resImg, tarImg, numInd);
-    if (numInd != -1) {
-        // save per-set f1 and sum
-        // Not computing per-set f1 here to save time; the original code used indFValInfo only at final generation
-        indFValInfo[numInd][numSets] = score;
-    }
-    return score;
-}
 
-// =====================================================
-// getCurGenInfo (unchanged logic but uses calScoreByInd)
-// =====================================================
-struct genType {
-    shared_ptr<TreeNode> eliteTree;
-    double eliteFValue;
-    double genMinFValue;
-    double genAveFValue;
-    double genDevFValue;
-};
+    for (int i = 0; i < numSets; i++) {
+        resImg[i] = executeTree(node, imgArr[i][0]);
+    }
+
+    //for (int i = 0; i < numSets; i++) tarImg[i] = imgArr[i][1];
+    //for (int i = 0; i < numSets; i++) resImg[i] = imgArr[i][1];
+
+    //for (int i = 0; i < numSets; i++) {
+    //    Mat out = executeTree(node, imgArr[i][0]);
+    //    // Force binary: if image is not binary, threshold at 127
+    //    Mat bin;
+    //    if (out.type() != CV_8UC1) cvtColor(out, out, COLOR_BGR2GRAY);
+    //    threshold(out, bin, 127, 255, THRESH_BINARY);
+    //    resImg[i] = bin;
+    //}
+
+    //double score = calculateMetrics(resImg, tarImg, numInd);
+    //if (numInd != -1) {
+    //    // save per-set f1 and sum
+    //    // Not computing per-set f1 here to save time; the original code used indFValInfo only at final generation
+    //    indFValInfo[numInd][numSets] = score;
+    //}
+    //return score;
+
+    return calculateMetrics(resImg, tarImg, numInd);
+}
 
 genType getCurGenInfo(vector<shared_ptr<TreeNode>>& population, Mat imgArr[][2]) {
     double firstScore = calScoreByInd(population[0], imgArr, -1);
