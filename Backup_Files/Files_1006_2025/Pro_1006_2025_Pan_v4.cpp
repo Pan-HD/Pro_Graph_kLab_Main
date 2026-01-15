@@ -21,7 +21,7 @@ using namespace cv;
 
 // GP parameters
 #define POP_SIZE 150 // Pop_Size of GP
-#define GENERATIONS 10000 // Generation of GP
+#define GENERATIONS 15000 // Generation of GP
 #define OFFSPRING_COUNT 20 // OFFSPRING_COUNT of GP
 #define MUTATION_RATE 0.9 // GP
 #define NUM_TYPE_FUNC 16 // GP
@@ -32,7 +32,7 @@ using namespace cv;
 #define GA_TRIGGER_THRESH 6.2
 #define GA_POP 30
 #define GA_GENERATIONS 100
-#define INITIAL_BIAS_THRESHOLD 0.18
+#define INITIAL_BIAS_THRESHOLD 0.23
 #define BIAS_DECAY 0.99
 #define BIAS_WINDOW 5
 
@@ -312,6 +312,134 @@ void confirmDepth(shared_ptr<TreeNode>& root, int maxDepth = MAX_DEPTH) {
         for (auto& c : n->children) walk(c);
         };
     walk(root);
+}
+
+double getFinalParamVal(const shared_ptr<TreeNode>& node, int idxParam) {
+    switch (node->type) {
+    case TERMINAL_INPUT:
+        return -1.0;
+    case GAUSSIAN_BLUR: {
+        switch (idxParam) {
+        case 0: {
+            int k = max(1, int(node->params.size() > 0 ? int(node->params[0]) : 3));
+            if ((k % 2) == 0) k |= 1;
+            return (double)k;
+        }
+        case 1: {
+            double sigma = node->params.size() > 1 ? node->params[1] : 1.5;
+            return sigma;
+        }
+        default:
+            return -1.0;
+        }
+    }
+    case MED_BLUR: {
+        int k = max(1, int(node->params.size() > 0 ? int(node->params[0]) : 3));
+        if ((k % 2) == 0) k |= 1;
+        return (double)k;
+    }
+    case BLUR: {
+        int k = max(1, int(node->params.size() > 0 ? int(node->params[0]) : 3));
+        if ((k % 2) == 0) k |= 1;
+        return (double)k;
+    }
+    case BILATERAL_FILTER: {
+        switch (idxParam) {
+        case 0: {
+            int d = node->params.size() > 0 ? int(node->params[0]) : 9;
+            return (double)d;
+        }
+        case 1: {
+            double sigmaColor = node->params.size() > 1 ? node->params[1] : 75;
+            return sigmaColor;
+        }
+        case 2: {
+            double sigmaSpace = node->params.size() > 2 ? node->params[2] : 75;
+            return sigmaSpace;
+        }
+        default:
+            return -1.0;
+        }
+    }
+    case SOBEL_X: {
+        int k = max(1, int(node->params.size() > 0 ? int(node->params[0]) : 3));
+        if ((k % 2) == 0) k |= 1;
+        return (double)k;
+    }
+    case SOBEL_Y: {
+        int k = max(1, int(node->params.size() > 0 ? int(node->params[0]) : 3));
+        if ((k % 2) == 0) k |= 1;
+        return (double)k;
+    }
+    case CANNY: {
+        switch (idxParam) {
+        case 0: {
+            double t1 = node->params.size() > 0 ? node->params[0] : 100;
+            return t1;
+        }
+        case 1: {
+            double t2 = node->params.size() > 1 ? node->params[1] : 200;
+            return t2;
+        }
+        default:
+            return -1.0;
+        }
+    }
+    case DIFF_PROCESS:
+        return -1.0;
+    case THRESHOLD: {
+        double th = node->params.size() > 0 ? node->params[0] : 127.0;
+        return th;
+    }
+    case ERODE: {
+        int r = node->params.size() > 0 ? int(node->params[0]) : 1;
+        int k = 1 + 2 * max(0, r);
+        return (double)k;
+    }
+    case DILATE: {
+        int r = node->params.size() > 0 ? int(node->params[0]) : 1;
+        int k = 1 + 2 * max(0, r);
+        return (double)k;
+    }
+    case CONTOUR_PROCESS: {
+        switch (idxParam) {
+        case 0: {
+            int kk = node->params.size() > 0 ? int(node->params[0]) : 1;
+            int k = ((kk) / 2) | 1;
+            return (double)k;
+        }
+        case 1: {
+            int times = node->params.size() > 1 ? int(node->params[1]) / 2 : 0;
+            return (double)times;
+        }
+        case 2: {
+            int selType = 0;
+            if (node->params.size() > 2) selType = min(2, int(node->params[2] / 5));
+            return (double)selType;
+        }
+        case 3: {
+            int range = node->params.size() > 3 ? int(node->params[3]) / 2 : 0;
+            return (double)range;
+        }
+        case 4: {
+            int areaTh = node->params.size() > 4 ? int(node->params[4]) : 1;
+            return (double)areaTh;
+        }
+        default:
+            return -1.0;
+        }
+    }
+    case BITWISE_AND:
+        return -1.0;
+    case BITWISE_OR:
+        return -1.0;
+    case BITWISE_NOT:
+        return -1.0;
+    case BITWISE_XOR:
+        return -1.0;
+    default:
+        return -1.0;
+    }
 }
 
 // =====================================================
@@ -654,7 +782,7 @@ void printTree(const shared_ptr<TreeNode>& node,
     if (!node->params.empty()) {
         fprintf(fp, " (");
         for (size_t i = 0; i < node->params.size(); i++) {
-            fprintf(fp, "%.2f", node->params[i]);
+            fprintf(fp, "%.2f", getFinalParamVal(node, i));
             if (i + 1 < node->params.size()) fprintf(fp, ", ");
         }
         fprintf(fp, ")");
