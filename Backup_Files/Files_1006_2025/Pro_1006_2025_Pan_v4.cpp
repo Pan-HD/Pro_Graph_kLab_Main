@@ -937,24 +937,26 @@ vector<double> runGrayGA_forTree(shared_ptr<TreeNode> rootInGP, Mat imgArr[][2])
     }
     int numsParams = (int)baseGenes.size();
 
-    struct GrayInd { vector<string> arrStrVal; double fit; };
+    struct GrayInd { vector<string> arrStrVal; double fit = 0.01; };
     vector<GrayInd> pop(GA_POP);
 
     // initialize GA population
-    for (auto& ind : pop) {
-        ind.arrStrVal = baseGenes;
-        for (auto& g : ind.arrStrVal) g = mutateGrayBits(g, 0.05);
+    for (int idxInd = 0; idxInd < GA_POP; idxInd++) {
+        pop[idxInd].arrStrVal = baseGenes;
+        if (idxInd >= 1) {
+            for (auto& g : pop[idxInd].arrStrVal) g = mutateGrayBits(g, 0.05);
+        }
         // decode and evaluate
         vector<double> arrDecoded;
         arrDecoded.reserve(numsParams);
-        for (int i = 0; i < numsParams; ++i) arrDecoded.push_back(grayDecode(ind.arrStrVal[i], bounds[i].first, bounds[i].second));
+        for (int i = 0; i < numsParams; ++i) arrDecoded.push_back(grayDecode(pop[idxInd].arrStrVal[i], bounds[i].first, bounds[i].second));
         auto rootCloned = cloneTree(rootInGP);
         vector<shared_ptr<TreeNode>> nodesToSet;
         collectParams(rootCloned, nodesToSet);
         int pos = 0;
         for (auto& pn : nodesToSet)
             for (auto& p : pn->params) p = arrDecoded[pos++];
-        ind.fit = calScoreByInd(rootCloned, imgArr, -1);
+        pop[idxInd].fit = calScoreByInd(rootCloned, imgArr, -1);
     }
 
     // GA loop (elitism + one-point-ish crossover per gene)
