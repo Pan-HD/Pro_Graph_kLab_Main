@@ -1169,7 +1169,7 @@ void multiProcess(Mat imgArr[][2]) {
                           Break-Point-04
                         */
                         if (calScoreByInd(eliteTreeClone, imgArr, -1) <= genInfo[numGen].eliteFValue) {
-                            printf("Although GA optimization was triggered, it failed to improve the fitness value.\n");
+                            printf("(04)Although GA optimization was triggered, it failed to improve the fitness value.\n");
                             if (flag_tri_GA) flag_tri_GA = false;
                         }
                         else {
@@ -1181,7 +1181,7 @@ void multiProcess(Mat imgArr[][2]) {
                             flag_tri_GA = true;
                             idx_opt_GA = eliteIndex;
                             fitness_opt_GA = calScoreByInd(population[eliteIndex], imgArr, -1);
-                            printf("(04)(cur-GA) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
+                            printf("(05)(cur-GA) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
                             // protect this index in the next generation (avoid being selected & immediately broken)
                             protectedUntil[eliteIndex] = numGen + 1;
                             // cout << "[PT-ACTIT] GA wrote optimized params to elite index " << eliteIndex << " and protected until gen " << numGen + 2 << endl;
