@@ -1165,30 +1165,34 @@ void multiProcess(Mat imgArr[][2]) {
                             }
                         }
 
-                        // GA is just for Params_Optimizing, is confirmDepth necessary ?
-                        // confirmDepth(eliteTreeClone);
-
-                        // replace population's elite with optimized tree
-                        population[eliteIndex] = cloneTree(eliteTreeClone);
-
                         /*
                           Break-Point-04
                         */
-                        flag_tri_GA = true;
-                        idx_opt_GA = eliteIndex;
-                        fitness_opt_GA = calScoreByInd(population[eliteIndex], imgArr, -1);
-                        printf("(04)(cur-GA) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
-
-                        // protect this index in the next generation (avoid being selected & immediately broken)
-                        protectedUntil[eliteIndex] = numGen + 1;
-                        // cout << "[PT-ACTIT] GA wrote optimized params to elite index " << eliteIndex << " and protected until gen " << numGen + 2 << endl;
-                        printf("[PT-ACTIT] GA wrote optimized params to elite index %d and protected until gen %d\n", eliteIndex, numGen + 2);
+                        if (calScoreByInd(eliteTreeClone, imgArr, -1) <= genInfo[numGen].eliteFValue) {
+                            printf("Although GA optimization was triggered, it failed to improve the fitness value.\n");
+                            if (flag_tri_GA) flag_tri_GA = false;
+                        }
+                        else {
+                            // replace population's elite with optimized tree
+                            population[eliteIndex] = cloneTree(eliteTreeClone);
+                            /*
+                              Break-Point-05
+                            */
+                            flag_tri_GA = true;
+                            idx_opt_GA = eliteIndex;
+                            fitness_opt_GA = calScoreByInd(population[eliteIndex], imgArr, -1);
+                            printf("(04)(cur-GA) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
+                            // protect this index in the next generation (avoid being selected & immediately broken)
+                            protectedUntil[eliteIndex] = numGen + 1;
+                            // cout << "[PT-ACTIT] GA wrote optimized params to elite index " << eliteIndex << " and protected until gen " << numGen + 2 << endl;
+                            printf("[PT-ACTIT] GA wrote optimized params to elite index %d and protected until gen %d\n", eliteIndex, numGen + 2);
+                            biasThreshold *= BIAS_DECAY;
+                        }
                     }
-                    biasThreshold *= BIAS_DECAY;
                 }
                 else {
                     /*
-                      Break-Point-05
+                      Break-Point-06
                     */
                     if (flag_tri_GA) flag_tri_GA = false;
                 }
