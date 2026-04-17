@@ -34,7 +34,7 @@ using namespace cv;
 // optimization fails after invoking the GA module.
 #define NUM_DELAY_GA 200
 
-#define GA_TRIGGER_THRESH 2.2
+#define GA_TRIGGER_THRESH 6.2
 #define GA_POP 30
 #define GA_GENERATIONS 100
 #define INITIAL_BIAS_THRESHOLD 0.23
