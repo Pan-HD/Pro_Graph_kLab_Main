@@ -15,7 +15,6 @@
 using namespace std;
 using namespace cv;
 
-#define sysRunTimes 1
 #define numSets 8 // the num of sets(pairs)
 #define idSet 1 // for mark the selected set if the numSets been set of 1
 
@@ -28,18 +27,17 @@ using namespace cv;
 #define MAX_DEPTH 12 // { 0, 1, 2, ... } GP
 
 // GA parameters
-
-// A delay threshold for re-invoking the GA module—defined as the number of generations that must
-// pass before the GA module can be called again—set to reduce computational time when
-// optimization fails after invoking the GA module.
-#define NUM_DELAY_GA 200
-
 #define GA_TRIGGER_THRESH 6.2
 #define GA_POP 30
 #define GA_GENERATIONS 100
 #define INITIAL_BIAS_THRESHOLD 0.23
 #define BIAS_DECAY 0.99
 #define BIAS_WINDOW 5
+
+// A delay threshold for re-invoking the GA module—defined as the number of generations that must
+// pass before the GA module can be called again—set to reduce computational time when
+// optimization fails after invoking the GA module.
+#define NUM_DELAY_GA 200
 
 // =====================================================
 // Random utilities (unified)
@@ -1044,6 +1042,12 @@ void multiProcess(Mat imgArr[][2]) {
         perror("Cannot open the file");
     }
 
+    FILE* fl_logOptiGA = nullptr;
+    errno_t err4 = fopen_s(&fl_logOptiGA, "./imgs_1006_2025_v7/output/log_opti_ga.txt", "a");
+    if (err4 != 0 || fl_logOptiGA == nullptr) {
+        perror("Cannot open the file");
+    }
+
     initParamDesc();
     initParamDesc_safeVal();
 
@@ -1058,203 +1062,203 @@ void multiProcess(Mat imgArr[][2]) {
     int idx_opt_GA = -1;
     double fitness_opt_GA = 0.0;
 
-    for (int idxProTimes = 0; idxProTimes < sysRunTimes; idxProTimes++) {
-        vector<genType> genInfo;
-        vector<shared_ptr<TreeNode>> population;
-        population.reserve(POP_SIZE);
-        for (int i = 0; i < POP_SIZE; ++i) population.push_back(generateRandomTree());
+    vector<genType> genInfo;
+    vector<shared_ptr<TreeNode>> population;
+    population.reserve(POP_SIZE);
+    for (int i = 0; i < POP_SIZE; ++i) population.push_back(generateRandomTree());
 
-        double biasThreshold = INITIAL_BIAS_THRESHOLD;
+    double biasThreshold = INITIAL_BIAS_THRESHOLD;
 
-        for (int numGen = 0; numGen < GENERATIONS; numGen++) {
-            // cout << "---------idxProTimes: " << idxProTimes + 1 << ", generation: " << numGen + 1 << "---------" << endl;
-            printf("---------idxProTimes: %d, generation: %d---------\n", idxProTimes + 1, numGen + 1);
+    for (int numGen = 0; numGen < GENERATIONS; numGen++) {
+        printf("---------generation: %d---------\n", numGen + 1);
 
-            /*
-              Break-Point-02
-            */
-            if (flag_tri_GA) {
-                printf("(02)(pre-gen opti res) the idx_opt_GA: %d, the fitness_opt_GA(cur-gen): %.4f\n", idx_opt_GA, calScoreByInd(population[idx_opt_GA], imgArr, -1));
+        /*
+          Break-Point-02
+        */
+        //if (flag_tri_GA) {
+        //    printf("(02)(pre-gen opti res) the idx_opt_GA: %d, the fitness_opt_GA(cur-gen): %.4f\n", idx_opt_GA, calScoreByInd(population[idx_opt_GA], imgArr, -1));
+        //}
+
+        // select two parents that are NOT protected for this generation
+        int idx1 = rand_int(0, POP_SIZE - 1);
+        int idx2 = rand_int(0, POP_SIZE - 1);
+        auto choose_nonprotected = [&](int avoidGen)->int {
+            int tries = 0;
+            while (tries < 50) {
+                int c = rand_int(0, POP_SIZE - 1);
+                // modified point, " 「<=」→「<」 "
+                if (protectedUntil[c] < avoidGen) return c;
+                tries++;
             }
+            // fallback
+            return rand_int(0, POP_SIZE - 1);
+            };
+        idx1 = choose_nonprotected(numGen);
+        idx2 = choose_nonprotected(numGen);
+        while (idx2 == idx1) idx2 = choose_nonprotected(numGen);
 
-            // select two parents that are NOT protected for this generation
-            int idx1 = rand_int(0, POP_SIZE - 1);
-            int idx2 = rand_int(0, POP_SIZE - 1);
-            auto choose_nonprotected = [&](int avoidGen)->int {
-                int tries = 0;
-                while (tries < 50) {
-                    int c = rand_int(0, POP_SIZE - 1);
-                    // modified point, " 「<=」→「<」 "
-                    if (protectedUntil[c] < avoidGen) return c;
-                    tries++;
-                }
-                // fallback
-                return rand_int(0, POP_SIZE - 1);
-                };
-            idx1 = choose_nonprotected(numGen);
-            idx2 = choose_nonprotected(numGen);
-            while (idx2 == idx1) idx2 = choose_nonprotected(numGen);
+        auto parent1 = cloneTree(population[idx1]);
+        auto parent2 = cloneTree(population[idx2]);
 
-            auto parent1 = cloneTree(population[idx1]);
-            auto parent2 = cloneTree(population[idx2]);
+        vector<pair<double, shared_ptr<TreeNode>>> family;
+        double score1 = calScoreByInd(parent1, imgArr, -1);
+        double score2 = calScoreByInd(parent2, imgArr, -1);
 
-            vector<pair<double, shared_ptr<TreeNode>>> family;
-            double score1 = calScoreByInd(parent1, imgArr, -1);
-            double score2 = calScoreByInd(parent2, imgArr, -1);
+        family.push_back({ score1, parent1 });
+        family.push_back({ score2, parent2 });
 
-            family.push_back({ score1, parent1 });
-            family.push_back({ score2, parent2 });
+        for (int k = 0; k < OFFSPRING_COUNT; ++k) {
+            auto childA = cloneTree(parent1);
+            auto childB = cloneTree(parent2);
+            crossover(childA, childB);
+            auto chosen = (rand_real() < 0.5) ? childA : childB;
+            double fit = calScoreByInd(chosen, imgArr, -1);
+            family.push_back({ fit, chosen });
+        }
 
-            for (int k = 0; k < OFFSPRING_COUNT; ++k) {
-                auto childA = cloneTree(parent1);
-                auto childB = cloneTree(parent2);
-                crossover(childA, childB);
-                auto chosen = (rand_real() < 0.5) ? childA : childB;
-                double fit = calScoreByInd(chosen, imgArr, -1);
-                family.push_back({ fit, chosen });
+        for (int idxInd = 0; idxInd < (OFFSPRING_COUNT + 2); idxInd++) {
+            if (rand_real() < MUTATION_RATE) {
+                mutate(family[idxInd].second);
+                family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr, -1);
             }
+        }
 
-            for (int idxInd = 0; idxInd < (OFFSPRING_COUNT + 2); idxInd++) {
-                if (rand_real() < MUTATION_RATE) {
-                    mutate(family[idxInd].second);
-                    family[idxInd].first = calScoreByInd(family[idxInd].second, imgArr, -1);
-                }
-            }
+        sort(family.rbegin(), family.rend()); // descending by fitness
+        auto elite = family[0];
+        double total = 0;
+        for (const auto& f : family) total += f.first;
+        double r = rand_real() * total, accum = 0;
+        shared_ptr<TreeNode> rouletteSelected = family[1].second;
+        double scoreRouletteSelected = 0.01;
+        for (const auto& f : family) {
+            accum += f.first;
+            if (accum >= r) { rouletteSelected = f.second; scoreRouletteSelected = f.first; break; }
+        }
 
-            sort(family.rbegin(), family.rend()); // descending by fitness
-            auto elite = family[0];
-            double total = 0;
-            for (const auto& f : family) total += f.first;
-            double r = rand_real() * total, accum = 0;
-            shared_ptr<TreeNode> rouletteSelected = family[1].second;
-            double scoreRouletteSelected = 0.01;
-            for (const auto& f : family) {
-                accum += f.first;
-                if (accum >= r) { rouletteSelected = f.second; scoreRouletteSelected = f.first; break; }
-            }
+        if (elite.first > score1) {
+            population[idx1] = cloneTree(elite.second);
+        }
+        if (scoreRouletteSelected > score2) {
+            population[idx2] = cloneTree(rouletteSelected);
+        }
 
-            if (elite.first > score1) {
-                population[idx1] = cloneTree(elite.second);
-            }
-            if (scoreRouletteSelected > score2) {
-                population[idx2] = cloneTree(rouletteSelected);
-            }
+        genInfo.push_back(getCurGenInfo(population, imgArr));
+        double bias = calcBias(genInfo);
 
-            genInfo.push_back(getCurGenInfo(population, imgArr));
-            double bias = calcBias(genInfo);
-            // printf("the score of elite(%d gen): %.4f, bias: %.4f\n", numGen + 1, genInfo[numGen].eliteFValue, bias);
+        /*
+          Break-Point-03
+        */
+        printf("(Res-GP)the idx of eliteInd: %d, the fitness of GP: %.4f, the bias: %.4f\n", curMaxFvalIdx, genInfo[numGen].eliteFValue, bias);
 
-            /*
-              Break-Point-03
-            */
-            printf("(03)the idx of idx_ind_GP: %d, the fitness of GP: %.4f, the bias: %.4f", curMaxFvalIdx, genInfo[numGen].eliteFValue, bias);
+        // ---- Trigger GA when Bias low ----
+        if (numGen != GENERATIONS - 1) {
+            // if (ENABLE_GA && bias < biasThreshold) {
+            if (genInfo[numGen].eliteFValue >= GA_TRIGGER_THRESH && bias < biasThreshold) {
 
-            // ---- Trigger GA when Bias low ----
-            if (numGen != GENERATIONS - 1) {
-                // if (ENABLE_GA && bias < biasThreshold) {
-                if (genInfo[numGen].eliteFValue >= GA_TRIGGER_THRESH && bias < biasThreshold) {
+                // "first time of GA_Trigger" or "GA-Module successed in last Trigger" or "the delay-gen of GA is over"
+                if (lastGenFailGA < 0 || (lastGenFailGA + NUM_DELAY_GA) < numGen) {
 
-                    // "first time of GA_Trigger" or "GA-Module successed in last Trigger" or "the delay-gen of GA is over"
-                    if (lastGenFailGA < 0 || (lastGenFailGA + NUM_DELAY_GA) >= numGen) {
-                        printf("[PT-ACTIT] Trigger GA Phase (Bias: %.2f)\n", bias);
-                        // GA on current elite (curMaxFvalIdx computed in getCurGenInfo)
-                        auto eliteIndex = curMaxFvalIdx;
-                        auto eliteTreeClone = cloneTree(population[eliteIndex]);
-                        auto bestParams = runGrayGA_forTree(eliteTreeClone, imgArr);
-                        if (!bestParams.empty()) {
-                            // write back decoded params into eliteTreeClone then into population[eliteIndex]
-                            vector<shared_ptr<TreeNode>> paramNodes;
-                            collectParams(eliteTreeClone, paramNodes);
-                            int pos = 0;
-                            for (auto& n : paramNodes) {
-                                for (auto& p : n->params) {
-                                    if (pos < (int)bestParams.size()) p = bestParams[pos++];
-                                }
-                            }
-
-                            /*
-                              Break-Point-04
-                            */
-                            if (calScoreByInd(eliteTreeClone, imgArr, -1) <= genInfo[numGen].eliteFValue) {
-                                printf("(04)Although GA optimization was triggered, it failed to improve the fitness value.\n");
-                                if (flag_tri_GA) flag_tri_GA = false;
-                                // when GA-Module is failed to opti the fValue, GA-Delay been triggered.
-                                lastGenFailGA = numGen;
-                            }
-                            else {
-                                // replace population's elite with optimized tree
-                                population[eliteIndex] = cloneTree(eliteTreeClone);
-                                /*
-                                  Break-Point-05
-                                */
-                                flag_tri_GA = true;
-                                idx_opt_GA = eliteIndex;
-                                fitness_opt_GA = calScoreByInd(population[eliteIndex], imgArr, -1);
-                                printf("(05)(cur-GA) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
-                                // protect this index in the next generation (avoid being selected & immediately broken)
-                                protectedUntil[eliteIndex] = numGen + 1;
-                                // cout << "[PT-ACTIT] GA wrote optimized params to elite index " << eliteIndex << " and protected until gen " << numGen + 2 << endl;
-                                printf("[PT-ACTIT] GA wrote optimized params to elite index %d and protected until gen %d\n", eliteIndex, numGen + 2);
-                                biasThreshold *= BIAS_DECAY;
-                                if (lastGenFailGA >= 0) lastGenFailGA = -1;
+                    printf("[PT-ACTIT] Trigger GA Phase (Bias: %.2f)\n", bias);
+                    // GA on current elite (curMaxFvalIdx computed in getCurGenInfo)
+                    auto eliteIndex = curMaxFvalIdx;
+                    auto eliteTreeClone = cloneTree(population[eliteIndex]);
+                    auto bestParams = runGrayGA_forTree(eliteTreeClone, imgArr);
+                    if (!bestParams.empty()) {
+                        // write back decoded params into eliteTreeClone then into population[eliteIndex]
+                        vector<shared_ptr<TreeNode>> paramNodes;
+                        collectParams(eliteTreeClone, paramNodes);
+                        int pos = 0;
+                        for (auto& n : paramNodes) {
+                            for (auto& p : n->params) {
+                                if (pos < (int)bestParams.size()) p = bestParams[pos++];
                             }
                         }
-                    }
-                    else { // GA Module been blocked within the delay-gen period.
-                        printf("-----GA Module been blocked within the delay-gen period.-----\n");
-                        if (flag_tri_GA) flag_tri_GA = false;
+
+                        /*
+                          Break-Point-04
+                        */
+                        if (calScoreByInd(eliteTreeClone, imgArr, -1) <= genInfo[numGen].eliteFValue) {
+                            printf("(Note_GA_Fail) Although GA optimization was triggered, it failed to improve the fitness value.\n");
+                            fprintf(fl_logOptiGA, "(Note_GA_Fail) Gen: %d\n", numGen + 1);
+                            if (flag_tri_GA) flag_tri_GA = false;
+                            // when GA-Module is failed to opti the fValue, GA-Delay been triggered.
+                            lastGenFailGA = numGen;
+                        }
+                        else {
+                            // replace population's elite with optimized tree
+                            population[eliteIndex] = cloneTree(eliteTreeClone);
+                            /*
+                              Break-Point-05
+                            */
+                            flag_tri_GA = true;
+                            idx_opt_GA = eliteIndex;
+                            fitness_opt_GA = calScoreByInd(population[eliteIndex], imgArr, -1);
+                            printf("(Note_GA_Success) the idx_opt_GA: %d, the fitness_opt_GA: %.4f\n", idx_opt_GA, fitness_opt_GA);
+                            fprintf(fl_logOptiGA, "(Note_GA_Success) Gen: %d, oriScore: %.4f, optiScore: %.4f\n", numGen + 1, genInfo[numGen].eliteFValue, fitness_opt_GA);
+                            // protect this index in the next generation (avoid being selected & immediately broken)
+                            protectedUntil[eliteIndex] = numGen + 1;
+                            // cout << "[PT-ACTIT] GA wrote optimized params to elite index " << eliteIndex << " and protected until gen " << numGen + 2 << endl;
+                            printf("[PT-ACTIT] GA wrote optimized params to elite index %d and protected until gen %d\n", eliteIndex, numGen + 2);
+                            biasThreshold *= BIAS_DECAY;
+                            if (lastGenFailGA >= 0) lastGenFailGA = -1;
+                        }
                     }
                 }
-                else {
-                    /*
-                      Break-Point-06
-                    */
+                else { // GA Module been blocked within the delay-gen period.
+                    printf("-----GA Module been blocked within the delay-gen period.-----\n");
                     if (flag_tri_GA) flag_tri_GA = false;
                 }
             }
             else {
-                // final generation: record indFValInfo
-                for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
-                    calScoreByInd(population[idxInd], imgArr, idxInd);
-                    // optionally also store per-set results if needed
-                }
-            }
-        } // end generation
-
-        printf("---------------- GEN-END --------------\n");
-
-        // If best improved beyond threshold, write outputs and save tree
-        if (indFValInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
-            curThreshFVal = indFValInfo[curMaxFvalIdx][numSets];
-            printTree(genInfo.back().eliteTree, 0, fl_printTree);
-            // write f-values
-            for (size_t i = 0; i < genInfo.size(); ++i) {
-                if (fl_fValue) fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
-            }
-            if (fl_maxFval) {
-                for (int i = 0; i <= numSets; i++) fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
-                fprintf(fl_maxFval, "\n");
-            }
-            // save final images for elite of last generation
-            for (int idxSet = 0; idxSet < numSets; idxSet++) {
-                Mat res = executeTree(genInfo.back().eliteTree, imgArr[idxSet][0]);
-                sprintf_s(imgName_pro[idxSet], "./imgs_1006_2025_v7/output/img_0%d/Gen-Final-t%d.png", idxSet + 1, idxProTimes + 1);
-                imwrite(imgName_pro[idxSet], res);
-                Mat concat;
-                vector<Mat> vec = { res, imgArr[idxSet][1] };
-                hconcat(vec, concat);
-                sprintf_s(imgName_final[idxSet], "./imgs_1006_2025_v7/output/img_0%d/imgs_final-t%d.png", idxSet + 1, idxProTimes + 1);
-                imwrite(imgName_final[idxSet], concat);
+                /*
+                  Break-Point-06
+                */
+                if (flag_tri_GA) flag_tri_GA = false;
             }
         }
+        else {
+            // final generation: record indFValInfo
+            for (int idxInd = 0; idxInd < POP_SIZE; idxInd++) {
+                calScoreByInd(population[idxInd], imgArr, idxInd);
+                // optionally also store per-set results if needed
+            }
+        }
+    } // end generation
 
-        // reset curMaxFvalIdx
-        curMaxFvalIdx = 0;
-    } // end sysRunTimes
+    printf("---------------- GEN-END --------------\n");
+
+    // If best improved beyond threshold, write outputs and save tree
+    if (indFValInfo[curMaxFvalIdx][numSets] > curThreshFVal) {
+        curThreshFVal = indFValInfo[curMaxFvalIdx][numSets];
+        printTree(genInfo.back().eliteTree, 0, fl_printTree);
+        // write f-values
+        for (size_t i = 0; i < genInfo.size(); ++i) {
+            if (fl_fValue) fprintf(fl_fValue, "%.4f %.4f %.4f %.4f\n", genInfo[i].eliteFValue, genInfo[i].genMinFValue, genInfo[i].genAveFValue, genInfo[i].genDevFValue);
+        }
+        if (fl_maxFval) {
+            for (int i = 0; i <= numSets; i++) fprintf(fl_maxFval, "%.4f ", indFValInfo[curMaxFvalIdx][i]);
+            fprintf(fl_maxFval, "\n");
+        }
+        // save final images for elite of last generation
+        for (int idxSet = 0; idxSet < numSets; idxSet++) {
+            Mat res = executeTree(genInfo.back().eliteTree, imgArr[idxSet][0]);
+            sprintf_s(imgName_pro[idxSet], "./imgs_1006_2025_v7/output/img_0%d/Gen-Final.png", idxSet + 1);
+            imwrite(imgName_pro[idxSet], res);
+            Mat concat;
+            vector<Mat> vec = { res, imgArr[idxSet][1] };
+            hconcat(vec, concat);
+            sprintf_s(imgName_final[idxSet], "./imgs_1006_2025_v7/output/img_0%d/imgs_final.png", idxSet + 1);
+            imwrite(imgName_final[idxSet], concat);
+        }
+    }
+
+    // reset curMaxFvalIdx
+    curMaxFvalIdx = 0;
 
     if (fl_fValue) fclose(fl_fValue);
     if (fl_maxFval) fclose(fl_maxFval);
     if (fl_printTree) fclose(fl_printTree);
+    if (fl_logOptiGA) fclose(fl_logOptiGA);
 }
 
 // =====================================================
